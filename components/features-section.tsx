@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Calculator, BarChart3, Lightbulb, Clock, TrendingUp } from 'lucide-react'
+import { Calculator, Lightbulb, Clock, TrendingUp } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -11,10 +11,6 @@ const features = [
   {
     icon: Calculator,
     title: 'Calculation-Based Insights',
-  },
-  {
-    icon: BarChart3,
-    title: 'Detailed Reports',
   },
   {
     icon: Lightbulb,

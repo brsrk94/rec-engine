@@ -50,6 +50,38 @@ const equipmentConfig = {
   },
 }
 
+function hasMotorEfficiencyClass(rec: unknown): rec is { efficiencyClass: string } {
+  return typeof rec === 'object' && rec !== null && 'efficiencyClass' in rec
+}
+
+function hasMotorComparisonFields(
+  rec: unknown
+): rec is {
+  currentAnnualEnergy: number
+  recommendedAnnualEnergy: number
+  energySavings: number
+  currentAnnualCost: number
+  recommendedAnnualCost: number
+  costSavings: number
+  currentAnnualEmissions: number
+  recommendedAnnualEmissions: number
+  emissionSavings: number
+} {
+  return (
+    typeof rec === 'object' &&
+    rec !== null &&
+    'currentAnnualEnergy' in rec &&
+    'recommendedAnnualEnergy' in rec &&
+    'energySavings' in rec &&
+    'currentAnnualCost' in rec &&
+    'recommendedAnnualCost' in rec &&
+    'costSavings' in rec &&
+    'currentAnnualEmissions' in rec &&
+    'recommendedAnnualEmissions' in rec &&
+    'emissionSavings' in rec
+  )
+}
+
 function generateRecommendations(type: string, data: ReturnType<typeof useAssessmentStorage>['data']) {
   // Compressor recommendations
   if (type === 'compressor') {
@@ -401,7 +433,6 @@ export function ResultsView() {
               <div>
                 <p className="text-sm text-muted-foreground">Energy Savings</p>
                 <p className="text-2xl font-bold">{results.summary.totalEnergySavings.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">kWh/year</p>
               </div>
             </CardContent>
           </Card>
@@ -414,7 +445,6 @@ export function ResultsView() {
               <div>
                 <p className="text-sm text-muted-foreground">Cost Savings</p>
                 <p className="text-2xl font-bold">INR {results.summary.totalCostSavings.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">per year</p>
               </div>
             </CardContent>
           </Card>
@@ -427,7 +457,6 @@ export function ResultsView() {
               <div>
                 <p className="text-sm text-muted-foreground">CO2 Reduction</p>
                 <p className="text-2xl font-bold">{results.summary.totalEmissionSavings}</p>
-                <p className="text-xs text-muted-foreground">tCO2e/year</p>
               </div>
             </CardContent>
           </Card>
@@ -440,7 +469,6 @@ export function ResultsView() {
               <div>
                 <p className="text-sm text-muted-foreground">Payback Period</p>
                 <p className="text-2xl font-bold">{results.summary.averagePayback}</p>
-                <p className="text-xs text-muted-foreground">years</p>
               </div>
             </CardContent>
           </Card>
@@ -448,15 +476,6 @@ export function ResultsView() {
 
         {/* Recommendations */}
         <div ref={cardsRef} className="space-y-6">
-          {motorResults ? (
-            <Card className="border-emerald-200 bg-emerald-50/40">
-              <CardContent className="p-5">
-                <p className="text-sm font-medium text-emerald-900">
-                  {motorResults.recommendationNote}
-                </p>
-              </CardContent>
-            </Card>
-          ) : null}
 
           {/* Current System */}
           <Card>
@@ -510,7 +529,7 @@ export function ResultsView() {
                             <Badge className="bg-primary text-primary-foreground">
                               {rec.badge}
                             </Badge>
-                            {type === 'motor' && 'efficiencyClass' in rec ? (
+                            {type === 'motor' && hasMotorEfficiencyClass(rec) ? (
                               <Badge variant="outline">{rec.efficiencyClass}</Badge>
                             ) : null}
                           </div>
@@ -563,7 +582,7 @@ export function ResultsView() {
                         )}
                       </div>
 
-                      {type === 'motor' && motorResults && 'currentAnnualEnergy' in rec ? (
+                      {type === 'motor' && motorResults && hasMotorComparisonFields(rec) ? (
                         <div className="mt-5 grid gap-4 md:grid-cols-3">
                           <div className="rounded-xl border border-border/80 bg-background p-4">
                             <p className="text-sm font-medium text-foreground">Annual Energy</p>
