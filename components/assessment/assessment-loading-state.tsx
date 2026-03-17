@@ -7,7 +7,7 @@ export function AssessmentLoadingState() {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 px-2.5 pt-[10px] sm:px-4 md:px-6">
-        <div className="mx-auto flex h-[52px] max-w-7xl items-center justify-between rounded-[12px] border border-border/70 bg-card px-2.5 shadow-sm sm:h-[58px] sm:px-4 md:h-[66px] md:px-6">
+        <div className="neo-panel mx-auto flex h-[52px] max-w-7xl items-center justify-between rounded-[12px] bg-card px-2.5 sm:h-[58px] sm:px-4 md:h-[66px] md:px-6">
           <Skeleton className="h-9 w-[74px] rounded-[8px] sm:h-10 sm:w-[94px]" />
           <Skeleton className="h-8 w-24 rounded-md sm:w-32" />
         </div>

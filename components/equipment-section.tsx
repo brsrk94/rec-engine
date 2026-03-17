@@ -50,9 +50,9 @@ export function EquipmentSection() {
           {equipmentTypes.map((equipment) => (
             <div
               key={equipment.id}
-              className="flex h-full flex-col rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              className="flex h-full flex-col rounded-xl border-2 border-slate-900/10 bg-card p-4 shadow-[4px_4px_0_0_rgba(15,23,42,0.10)] sm:p-5"
             >
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 sm:h-12 sm:w-12">
+                <div className="neo-chip mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 sm:h-12 sm:w-12">
                   <AssessmentEquipmentImage
                     equipmentId={equipment.id as AssessmentEquipmentId}
                     className="h-9 w-9 border-0 shadow-none"

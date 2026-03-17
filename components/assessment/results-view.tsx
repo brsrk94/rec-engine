@@ -1,13 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, RotateCcw } from 'lucide-react'
 
-import { MotorRecommendationCharts } from '@/components/assessment/motor-recommendation-charts'
-import { CompressorRecommendationCharts } from '@/components/assessment/compressor-recommendation-charts'
 import {
   AssessmentEquipmentImage,
   ASSESSMENT_EQUIPMENT_ASSETS,
@@ -39,6 +38,43 @@ import {
 } from '@/lib/assessment/equipment-meta'
 import { buildMotorRecommendation, type MotorRecommendationResult } from '@/lib/motor-catalog'
 import { formatIndianNumber } from '@/lib/formatting'
+
+function ChartPanelSkeleton() {
+  return (
+    <div className="grid gap-6 xl:grid-cols-2">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <div
+          key={index}
+          className="neo-card h-[380px] rounded-3xl bg-card p-4 sm:h-[420px] sm:p-6"
+        >
+          <div className="h-full animate-pulse rounded-[22px] bg-muted/40" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const MotorRecommendationCharts = dynamic(
+  () =>
+    import('@/components/assessment/motor-recommendation-charts').then(
+      (module) => module.MotorRecommendationCharts
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  }
+)
+
+const CompressorRecommendationCharts = dynamic(
+  () =>
+    import('@/components/assessment/compressor-recommendation-charts').then(
+      (module) => module.CompressorRecommendationCharts
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  }
+)
 
 function isKnownEquipmentType(value: string): value is AssessmentEquipmentKey {
   return value in assessmentEquipmentMeta

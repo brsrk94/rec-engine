@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -72,6 +72,7 @@ export function MotorForm({ onBack }: MotorFormProps) {
   const router = useRouter()
   const { data, updateMotor } = useAssessmentStorage()
   const prefersReducedMotion = useReducedMotion()
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
   const motor = data.motor
   const {
     catalog,
@@ -238,11 +239,6 @@ export function MotorForm({ onBack }: MotorFormProps) {
     })
   }, [motor.target_catalog_motor, motor.target_motor_efficiency_class, targetCatalogMotor, updateMotor])
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    router.push('/assessment/results?type=motor')
-  }
-
   const handleMakeChange = (value: string) => {
     updateMotor({
       motor_make: value,
@@ -267,17 +263,47 @@ export function MotorForm({ onBack }: MotorFormProps) {
     })
   }
 
-  const isFormValid = () => {
-    return Boolean(
-      motor.motor_make &&
-        motor.motor_model &&
-        motor.motor_rating &&
-        motor.current_motor_efficiency_class &&
-        motor.target_motor_efficiency_class &&
-        motor.operating_hours_year &&
-        motor.capex_of_current_motor_class &&
-        motor.capex_of_target_motor_class
-    )
+  const requiredFields = useMemo(
+    () => [
+      { label: 'Equipment Make', value: motor.motor_make },
+      { label: 'Equipment Model', value: motor.motor_model },
+      { label: 'Equipment Rating', value: motor.motor_rating },
+      { label: 'Current Equipment Efficiency Class', value: motor.current_motor_efficiency_class },
+      { label: 'Target Equipment Efficiency Class', value: motor.target_motor_efficiency_class },
+      {
+        label: 'Number of Years of Operation of Current Equipment Class',
+        value: motor.years_of_operation_current_motor_class,
+      },
+      { label: 'Capex of Current Equipment Class', value: motor.capex_of_current_motor_class },
+      { label: 'Lifetime of Target Equipment Class', value: motor.lifetime_of_target_motor_class },
+      { label: 'Capex of Target Equipment Class', value: motor.capex_of_target_motor_class },
+      { label: 'Load Factor', value: motor.load_factor },
+      { label: 'Operating Hours/Year', value: motor.operating_hours_year },
+      { label: 'Number of Equipment Units', value: motor.number_of_motors },
+      { label: 'Electricity Tariff', value: motor.electricity_tariff },
+      { label: 'Grid Emission Factor', value: motor.grid_emission_factor },
+    ],
+    [motor]
+  )
+
+  const missingFieldLabels = useMemo(
+    () =>
+      requiredFields
+        .filter((field) => !String(field.value ?? '').trim())
+        .map((field) => field.label),
+    [requiredFields]
+  )
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (missingFieldLabels.length > 0) {
+      setShowValidationErrors(true)
+      return
+    }
+
+    setShowValidationErrors(false)
+    router.push('/assessment/results?type=motor')
   }
 
   const isSameClassFallbackOnly =
@@ -572,12 +598,22 @@ export function MotorForm({ onBack }: MotorFormProps) {
             </Card>
           </div>
 
+          {showValidationErrors && missingFieldLabels.length > 0 ? (
+            <div className="neo-panel mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-900">
+              <p className="font-semibold">Please fill these fields before generating recommendations:</p>
+              <p className="mt-1">{missingFieldLabels.join(', ')}</p>
+            </div>
+          ) : null}
+
           <div className="mt-6 flex flex-col-reverse gap-3 sm:mt-8 sm:flex-row sm:justify-between sm:gap-4">
             <Button type="button" variant="outline" onClick={onBack} className="w-full sm:w-auto">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Change Equipment
             </Button>
-            <Button type="submit" disabled={!isFormValid()} className="w-full sm:min-w-[220px] sm:w-auto">
+            <Button
+              type="submit"
+              className="w-full bg-[#065F46] text-white hover:bg-[#054f3a] sm:min-w-[220px] sm:w-auto"
+            >
               Generate Recommendations
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

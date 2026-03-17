@@ -113,12 +113,12 @@ export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
             transition={smoothTransition}
           >
             <Card
-              className="group cursor-pointer border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:border-primary/35 hover:shadow-lg"
+              className="group cursor-pointer border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:border-primary/35"
               onClick={() => onSelect(option.id)}
             >
               <CardHeader className="gap-4 pb-3">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/8 ring-1 ring-primary/10">
+                  <div className="neo-chip flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/8 ring-1 ring-primary/10">
                     <AssessmentEquipmentImage
                       equipmentId={option.id as AssessmentEquipmentId}
                       className="h-9 w-9 rounded-lg border-0 bg-transparent"
@@ -142,7 +142,7 @@ export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
         ))}
       </motion.div>
 
-      <motion.p variants={fadeUpVariants} className="text-center text-xs leading-5 text-muted-foreground md:hidden">
+      <motion.p variants={fadeUpVariants} className="neo-chip mx-auto w-fit rounded-full px-3 py-1 text-center text-xs leading-5 text-muted-foreground md:hidden">
         Choose the equipment from the dropdown above to continue.
       </motion.p>
     </motion.div>

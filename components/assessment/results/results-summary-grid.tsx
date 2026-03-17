@@ -29,7 +29,7 @@ const summaryCards: SummaryCardDefinition[] = [
     unit: 'kWh/year',
     icon: TrendingDown,
     wrapperClassName: 'border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10',
-    iconClassName: 'bg-primary/20 text-primary',
+    iconClassName: 'neo-chip bg-primary/20 text-primary',
   },
   {
     key: 'cost',
@@ -38,7 +38,7 @@ const summaryCards: SummaryCardDefinition[] = [
     prefix: 'INR ',
     icon: DollarSign,
     wrapperClassName: 'border-green-500/20 bg-gradient-to-br from-green-500/5 to-green-500/10',
-    iconClassName: 'bg-green-500/20 text-green-600',
+    iconClassName: 'neo-chip bg-green-500/20 text-green-600',
   },
   {
     key: 'emissions',
@@ -46,7 +46,7 @@ const summaryCards: SummaryCardDefinition[] = [
     unit: 'tCO2e/year',
     icon: Leaf,
     wrapperClassName: 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-emerald-500/10',
-    iconClassName: 'bg-emerald-500/20 text-emerald-600',
+    iconClassName: 'neo-chip bg-emerald-500/20 text-emerald-600',
   },
   {
     key: 'payback',
@@ -54,7 +54,7 @@ const summaryCards: SummaryCardDefinition[] = [
     unit: 'years',
     icon: Clock,
     wrapperClassName: 'border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-blue-500/10',
-    iconClassName: 'bg-blue-500/20 text-blue-600',
+    iconClassName: 'neo-chip bg-blue-500/20 text-blue-600',
   },
 ]
 
@@ -75,8 +75,8 @@ export function ResultsSummaryGrid({
     <div className={className}>
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <Card key={card.key} className={card.wrapperClassName}>
-            <CardContent className="flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4">
+            <Card key={card.key} className={card.wrapperClassName}>
+              <CardContent className="flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4">
               <div className={`flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12 ${card.iconClassName}`}>
                 <card.icon className="h-6 w-6" />
               </div>

@@ -146,7 +146,7 @@ function ChartLegend({ items }: { items: ChartLegendEntry[] }) {
       {items.map((item) => (
         <div
           key={item.label}
-          className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-slate-600 sm:text-xs"
+          className="neo-chip inline-flex max-w-full items-center gap-2 rounded-full bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-slate-600 sm:text-xs"
         >
           <span
             aria-hidden="true"
@@ -636,7 +636,7 @@ export function MotorRecommendationCharts({
         </CardHeader>
         <CardContent className="space-y-4">
           <ChartLegend items={legendEntries} />
-          <div ref={energyPlotRef} className="h-[320px] sm:h-[360px]">
+          <div ref={energyPlotRef} className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
             <Bar
               ref={energyChartRef}
               data={energyData}
@@ -669,7 +669,7 @@ export function MotorRecommendationCharts({
         </CardHeader>
         <CardContent className="space-y-4">
           <ChartLegend items={legendEntries} />
-          <div ref={emissionPlotRef} className="h-[320px] sm:h-[360px]">
+          <div ref={emissionPlotRef} className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
             <Bar
               ref={emissionChartRef}
               data={emissionData}

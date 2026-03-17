@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { memo, startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -49,25 +49,29 @@ function SearchableSelectComponent({
     () => options.find((option) => option.value === value),
     [options, value]
   )
+  const indexedOptions = useMemo(
+    () =>
+      options.map((option) => ({
+        ...option,
+        searchBlob: [
+          option.label,
+          option.description ?? '',
+          ...(option.keywords ?? []),
+        ]
+          .join(' ')
+          .toLowerCase(),
+      })),
+    [options]
+  )
   const filteredOptions = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase()
 
     if (!normalizedQuery) {
-      return options
+      return indexedOptions
     }
 
-    return options.filter((option) => {
-      const searchableText = [
-        option.label,
-        option.description ?? '',
-        ...(option.keywords ?? []),
-      ]
-        .join(' ')
-        .toLowerCase()
-
-      return searchableText.includes(normalizedQuery)
-    })
-  }, [deferredQuery, options])
+    return indexedOptions.filter((option) => option.searchBlob.includes(normalizedQuery))
+  }, [deferredQuery, indexedOptions])
 
   useEffect(() => {
     if (!open && searchQuery) {
@@ -83,7 +87,10 @@ function SearchableSelectComponent({
           variant="outline"
           role="combobox"
           disabled={disabled}
-          className={cn('w-full justify-between font-normal', className)}
+          className={cn(
+            'neo-field h-10 w-full justify-between rounded-xl bg-background px-3 text-left font-normal shadow-none transition-[transform,border-color,background-color,color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-background active:scale-100 sm:h-9',
+            className
+          )}
         >
           <span className="truncate text-left">
             {selectedOption ? selectedOption.label : placeholder}
@@ -91,11 +98,15 @@ function SearchableSelectComponent({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
             value={searchQuery}
-            onValueChange={setSearchQuery}
+            onValueChange={(nextValue) => {
+              startTransition(() => {
+                setSearchQuery(nextValue)
+              })
+            }}
             placeholder={searchPlaceholder}
           />
           <CommandList>

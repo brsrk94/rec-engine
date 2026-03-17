@@ -127,7 +127,7 @@ function CompressorLegendDot({ fill, border }: { fill: string; border: string })
 
 function CompressorChartsLegend() {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card px-4 py-4 sm:px-5">
+    <div className="neo-panel rounded-2xl bg-card px-4 py-4 sm:px-5">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <CompressorLegendDot
@@ -428,14 +428,14 @@ export function CompressorRecommendationCharts({
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="border-border/80">
-          <CardHeader>
-            <CardTitle>Energy Consumption Comparison Graph</CardTitle>
+        <CardHeader>
+          <CardTitle>Energy Consumption Comparison Graph</CardTitle>
             <CardDescription>
               Current compressor versus the recommended compressor options.
             </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[320px] sm:h-[360px]">
+        </CardHeader>
+        <CardContent>
+            <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
               <Bar
                 data={energyChartData}
                 options={energyChartOptions}
@@ -451,9 +451,9 @@ export function CompressorRecommendationCharts({
             <CardDescription>
               Waterfall view for the strongest recommended compressor option.
             </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[320px] sm:h-[360px]">
+        </CardHeader>
+        <CardContent>
+            <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
               <Bar
                 data={waterfallChartData}
                 options={waterfallChartOptions}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -84,6 +84,7 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
   const { catalog, errorMessage: catalogError, isLoading: isCatalogLoading, reload } =
     useCompressorCatalog()
   const prefersReducedMotion = useReducedMotion()
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
   const previousAutoCurrentCapex = useRef('')
   const previousAutoTargetCapex = useRef('')
   const previousAutoEnergyConsumption = useRef('')
@@ -321,11 +322,6 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
     updateCompressor,
   ])
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    router.push('/assessment/results?type=compressor')
-  }
-
   const handleMakeChange = (value: string) => {
     updateCompressor({
       compressor_make: value,
@@ -347,14 +343,46 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
     })
   }
 
-  const isFormValid =
-    compressor.compressor_make &&
-    compressor.compressor_model &&
-    compressor.compressor_rating &&
-    compressor.current_compressor_type &&
-    compressor.target_compressor_type &&
-    compressor.compressor_operating_hours_year &&
-    compressor.compressor_electricity_tariff
+  const requiredFields = useMemo(
+    () => [
+      { label: 'Equipment Make', value: compressor.compressor_make },
+      { label: 'Equipment Model', value: compressor.compressor_model },
+      { label: 'Current Compressor Type', value: compressor.current_compressor_type },
+      { label: 'Current Rated Capacity', value: compressor.compressor_rating },
+      { label: 'Age of Current Compressor', value: compressor.years_of_operation_current_compressor },
+      { label: 'Capex of Current Compressor Type', value: compressor.capex_of_current_compressor },
+      { label: 'Target Compressor Type', value: compressor.target_compressor_type },
+      { label: 'Rated Capacity - Target Compressor', value: compressor.target_compressor_rating },
+      { label: 'Lifetime of Target Compressor', value: compressor.lifetime_of_target_compressor },
+      { label: 'Capex of Target Compressor Type', value: compressor.capex_of_target_compressor },
+      { label: 'Load Factor', value: compressor.compressor_load_factor },
+      { label: 'Operating Hours/Year', value: compressor.compressor_operating_hours_year },
+      { label: 'Electricity Tariff', value: compressor.compressor_electricity_tariff },
+      { label: 'Grid Emission Factor', value: compressor.compressor_grid_emission_factor },
+      { label: 'Energy Consumption', value: compressor.compressor_energy_consumption },
+    ],
+    [compressor]
+  )
+
+  const missingFieldLabels = useMemo(
+    () =>
+      requiredFields
+        .filter((field) => !String(field.value ?? '').trim())
+        .map((field) => field.label),
+    [requiredFields]
+  )
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (missingFieldLabels.length > 0) {
+      setShowValidationErrors(true)
+      return
+    }
+
+    setShowValidationErrors(false)
+    router.push('/assessment/results?type=compressor')
+  }
 
   return (
     <motion.div
@@ -697,12 +725,19 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
           </CardContent>
         </Card>
 
+        {showValidationErrors && missingFieldLabels.length > 0 ? (
+          <div className="neo-panel rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-900">
+            <p className="font-semibold">Please fill these fields before generating recommendations:</p>
+            <p className="mt-1">{missingFieldLabels.join(', ')}</p>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:justify-between">
           <Button type="button" variant="outline" onClick={onBack} className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Change Equipment
           </Button>
-          <Button type="submit" disabled={!isFormValid} className="w-full gap-2 sm:w-auto">
+          <Button type="submit" className="w-full gap-2 bg-[#065F46] text-white hover:bg-[#054f3a] sm:w-auto">
             Generate Recommendations
             <ArrowRight className="h-4 w-4" />
           </Button>

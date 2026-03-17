@@ -34,12 +34,12 @@ export function HowItWorksSection() {
         <div className="relative mt-8 sm:mt-10">
           <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
             {steps.map((step, index) => (
-              <div key={index} className="rounded-3xl border border-border/80 bg-card p-4 text-left shadow-sm sm:p-5">
+              <div key={index} className="rounded-3xl border-2 border-slate-900/10 bg-card p-4 text-left shadow-[4px_4px_0_0_rgba(15,23,42,0.10)] sm:p-5">
                 <div className="mb-4 flex items-center justify-between gap-4">
-                  <div className="inline-flex h-10 min-w-10 items-center justify-center rounded-2xl bg-primary/10 px-3 text-sm font-bold text-primary sm:h-11 sm:min-w-11">
+                  <div className="neo-chip inline-flex h-10 min-w-10 items-center justify-center rounded-2xl bg-primary/10 px-3 text-sm font-bold text-primary sm:h-11 sm:min-w-11">
                     {step.number}
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm sm:h-11 sm:w-11">
+                  <div className="neo-chip flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:h-11 sm:w-11">
                     <step.icon className="h-5 w-5" />
                   </div>
                 </div>

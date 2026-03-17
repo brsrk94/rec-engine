@@ -85,26 +85,26 @@ export function RecommendationCard({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            <div className="rounded-lg bg-secondary/50 p-3">
+            <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
               <p className="text-sm text-muted-foreground">Energy Savings</p>
               <p className="text-lg font-semibold text-primary">
                 {formatMetricValue(recommendation.energySavings)} kWh/yr
               </p>
             </div>
-            <div className="rounded-lg bg-secondary/50 p-3">
+            <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
               <p className="text-sm text-muted-foreground">Cost Savings</p>
               <p className="text-lg font-semibold text-green-600">
                 INR {formatMetricValue(recommendation.costSavings)}/yr
               </p>
             </div>
-            <div className="rounded-lg bg-secondary/50 p-3">
+            <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
               <p className="text-sm text-muted-foreground">CO2 Reduction</p>
               <p className="text-lg font-semibold text-emerald-600">
                 {formatMetricValue(recommendation.emissionSavings)} kg/yr
               </p>
             </div>
             {motorComparison ? (
-              <div className="rounded-lg bg-secondary/50 p-3">
+              <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
                 <p className="text-sm text-muted-foreground">Marginal Abatement Cost</p>
                 <p className="text-lg font-semibold text-emerald-700">
                   {recommendation.marginalAbatementCost ?? 'N/A'}
@@ -112,7 +112,7 @@ export function RecommendationCard({
                 <p className="text-xs text-muted-foreground">INR/kgCO2e</p>
               </div>
             ) : recommendation.marginalAbatementCost ? (
-              <div className="rounded-lg bg-secondary/50 p-3">
+              <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
                 <p className="text-sm text-muted-foreground">Marginal Abatement Cost</p>
                 <p className="text-lg font-semibold text-emerald-700">
                   {recommendation.marginalAbatementCost}
@@ -120,7 +120,7 @@ export function RecommendationCard({
                 <p className="text-xs text-muted-foreground">INR/kgCO2e</p>
               </div>
             ) : (
-              <div className="rounded-lg bg-secondary/50 p-3">
+              <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
                 <p className="text-sm text-muted-foreground">Efficiency</p>
                 <div className="flex items-center gap-2">
                   <Progress value={Math.min(recommendation.efficiency, 100)} className="h-2 flex-1" />
@@ -133,7 +133,7 @@ export function RecommendationCard({
           {motorComparison ? (
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               {comparisonPanels.map((panel) => (
-                <div key={panel.key} className="rounded-xl border border-border/80 bg-background p-4">
+                <div key={panel.key} className="neo-card rounded-xl bg-background p-4">
                   <p className="text-sm font-medium text-foreground">{panel.title}</p>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
@@ -156,7 +156,7 @@ export function RecommendationCard({
                         )}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">
+                    <div className="neo-chip flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">
                       <span>{panel.savingsLabel}</span>
                       <span className="font-semibold">
                         {formatComparisonValue(

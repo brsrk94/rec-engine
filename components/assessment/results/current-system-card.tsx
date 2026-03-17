@@ -26,16 +26,16 @@ export function CurrentSystemCard({ currentSystem }: CurrentSystemCardProps) {
       <CardContent>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {snapshotFields.map((field) => (
-            <div key={field.key}>
+            <div key={field.key} className="neo-chip rounded-2xl bg-muted/30 px-4 py-3">
               <p className="text-sm text-muted-foreground">{field.label}</p>
               <p className="font-medium">{currentSystem[field.key]}</p>
             </div>
           ))}
-          <div>
+          <div className="neo-chip rounded-2xl bg-muted/30 px-4 py-3">
             <p className="text-sm text-muted-foreground">Annual Energy</p>
             <p className="font-medium">{formatIndianNumber(currentSystem.annualEnergy)} kWh</p>
           </div>
-          <div>
+          <div className="neo-chip rounded-2xl bg-muted/30 px-4 py-3">
             <p className="text-sm text-muted-foreground">Annual Cost</p>
             <p className="font-medium">INR {formatIndianNumber(currentSystem.annualCost)}</p>
           </div>

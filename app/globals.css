@@ -5,6 +5,12 @@
 
 :root {
   --header-brand: #065F46;
+  --matrix-line: rgba(6, 95, 70, 0.08);
+  --matrix-glow: rgba(6, 95, 70, 0.04);
+  --neo-shadow-soft: 3px 3px 0 0 rgba(15, 23, 42, 0.12);
+  --neo-shadow-panel: 5px 5px 0 0 rgba(15, 23, 42, 0.10);
+  --neo-shadow-card: 4px 4px 0 0 rgba(15, 23, 42, 0.10);
+  --neo-shadow-field: 2px 2px 0 0 rgba(15, 23, 42, 0.08);
   /* Primary brand green - energy/sustainability */
   --background: oklch(0.99 0.002 110);
   --foreground: oklch(0.15 0.02 260);
@@ -43,6 +49,12 @@
 }
 
 .dark {
+  --matrix-line: rgba(134, 239, 172, 0.09);
+  --matrix-glow: rgba(134, 239, 172, 0.04);
+  --neo-shadow-soft: 3px 3px 0 0 rgba(2, 6, 23, 0.30);
+  --neo-shadow-panel: 5px 5px 0 0 rgba(2, 6, 23, 0.26);
+  --neo-shadow-card: 4px 4px 0 0 rgba(2, 6, 23, 0.24);
+  --neo-shadow-field: 2px 2px 0 0 rgba(2, 6, 23, 0.22);
   --background: oklch(0.12 0.02 260);
   --foreground: oklch(0.96 0.01 110);
   --card: oklch(0.16 0.02 260);
@@ -132,6 +144,12 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     overflow-x: clip;
+    background-image:
+      linear-gradient(to right, var(--matrix-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--matrix-line) 1px, transparent 1px),
+      radial-gradient(circle at top center, var(--matrix-glow), transparent 58%);
+    background-size: 32px 32px, 32px 32px, 100% 100%;
+    background-position: top center;
   }
   h1, h2, h3, h4, h5, h6 {
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
@@ -142,6 +160,95 @@
   video {
     max-width: 100%;
     height: auto;
+  }
+}
+
+@layer utilities {
+  .neo-button {
+    border-width: 2px;
+    border-color: rgba(15, 23, 42, 0.12);
+    box-shadow: var(--neo-shadow-soft);
+  }
+
+  .neo-button:hover {
+    transform: translate3d(-1px, -1px, 0);
+    box-shadow: 4px 4px 0 0 rgba(15, 23, 42, 0.14);
+  }
+
+  .neo-button:active {
+    transform: translate3d(0, 0, 0);
+    box-shadow: 2px 2px 0 0 rgba(15, 23, 42, 0.12);
+  }
+
+  .neo-panel {
+    border: 2px solid rgba(15, 23, 42, 0.12);
+    box-shadow: var(--neo-shadow-panel);
+  }
+
+  .neo-card {
+    border: 2px solid rgba(15, 23, 42, 0.10);
+    box-shadow: var(--neo-shadow-card);
+  }
+
+  .neo-chip {
+    border: 2px solid rgba(15, 23, 42, 0.10);
+    box-shadow: 2px 2px 0 0 rgba(15, 23, 42, 0.08);
+  }
+
+  .neo-field {
+    border-width: 2px;
+    border-color: rgba(15, 23, 42, 0.12);
+    box-shadow: var(--neo-shadow-field);
+  }
+
+  @media (hover: hover) {
+    .neo-card:hover {
+      transform: translate3d(-2px, -2px, 0);
+      box-shadow: 6px 6px 0 0 rgba(15, 23, 42, 0.12);
+    }
+
+    .neo-chip:hover {
+      transform: translate3d(-1px, -1px, 0);
+      box-shadow: 3px 3px 0 0 rgba(15, 23, 42, 0.10);
+    }
+  }
+
+  .neo-field:hover {
+    box-shadow: 3px 3px 0 0 rgba(15, 23, 42, 0.10);
+  }
+
+  .neo-field:focus-visible,
+  .neo-field[data-state='open'] {
+    transform: translate3d(-1px, -1px, 0);
+    box-shadow: 4px 4px 0 0 rgba(15, 23, 42, 0.12);
+  }
+
+  .neo-cta {
+    border: 2px solid rgba(15, 23, 42, 0.16);
+    background: var(--header-brand);
+    color: #ffffff;
+    box-shadow: 6px 6px 0 0 rgba(15, 23, 42, 0.14);
+  }
+
+  .neo-cta:hover {
+    transform: translate3d(-2px, -2px, 0);
+    box-shadow: 8px 8px 0 0 rgba(15, 23, 42, 0.16);
+    background: #054f3a;
+  }
+
+  .neo-cta:active {
+    transform: translate3d(0, 0, 0);
+    box-shadow: 4px 4px 0 0 rgba(15, 23, 42, 0.14);
+  }
+
+  .neo-chart-stage {
+    border: 2px solid rgba(15, 23, 42, 0.10);
+    box-shadow: 4px 4px 0 0 rgba(15, 23, 42, 0.10);
+    background-image:
+      linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-color: rgba(255, 255, 255, 0.72);
   }
 }
 

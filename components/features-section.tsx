@@ -6,10 +6,6 @@ const features = [
     title: 'Calculation-Based Insights',
   },
   {
-    icon: Lightbulb,
-    title: 'Expert Recommendations',
-  },
-  {
     icon: Clock,
     title: 'Quick Assessment',
   },
@@ -36,9 +32,9 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group rounded-xl border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-lg sm:p-5"
+              className="rounded-xl border-2 border-slate-900/10 bg-card p-4 shadow-[4px_4px_0_0_rgba(15,23,42,0.10)] sm:p-5"
             >
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground sm:h-12 sm:w-12">
+              <div className="neo-chip mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-12 sm:w-12">
                 <feature.icon className="h-6 w-6" />
               </div>
               <h3 className="text-lg font-semibold">{feature.title}</h3>
