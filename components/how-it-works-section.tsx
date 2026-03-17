@@ -1,5 +1,3 @@
-"use client"
-
 import { ClipboardList, Cpu, FileCheck } from 'lucide-react'
 
 const steps = [
@@ -24,7 +22,7 @@ export function HowItWorksSection() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-24 bg-background py-14 md:scroll-mt-28 md:py-24"
+      className="scroll-mt-24 bg-background py-12 sm:py-14 md:scroll-mt-28 md:py-24"
     >
       <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6">
         <div className="mx-auto max-w-2xl text-center">
@@ -36,17 +34,17 @@ export function HowItWorksSection() {
         <div className="relative mt-8 sm:mt-10">
           <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
             {steps.map((step, index) => (
-              <div key={index} className="rounded-3xl border border-border/80 bg-card p-5 text-left shadow-sm">
+              <div key={index} className="rounded-3xl border border-border/80 bg-card p-4 text-left shadow-sm sm:p-5">
                 <div className="mb-4 flex items-center justify-between gap-4">
-                  <div className="inline-flex h-11 min-w-11 items-center justify-center rounded-2xl bg-primary/10 px-3 text-sm font-bold text-primary">
+                  <div className="inline-flex h-10 min-w-10 items-center justify-center rounded-2xl bg-primary/10 px-3 text-sm font-bold text-primary sm:h-11 sm:min-w-11">
                     {step.number}
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm sm:h-11 sm:w-11">
                     <step.icon className="h-5 w-5" />
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold sm:text-xl">{step.title}</h3>
+                <h3 className="text-base font-semibold sm:text-xl">{step.title}</h3>
               </div>
             ))}
           </div>

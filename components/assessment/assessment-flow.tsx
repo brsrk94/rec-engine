@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { gsap } from 'gsap'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
 import { AssessmentHeader } from './assessment-header'
 import { EquipmentSelector } from './equipment-selector'
@@ -12,13 +12,15 @@ import { BLDCFanForm } from './bldc-fan-form'
 import { AirConditionerForm } from './air-conditioner-form'
 import { LEDRetrofitForm } from './led-retrofit-form'
 import { DGSetForm } from './dg-set-form'
+import { AssessmentLoadingState } from './assessment-loading-state'
+import { fadeUpVariants } from '@/components/motion/variants'
 
 export function AssessmentFlow() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data, isLoaded, updateSelectedEquipment, clearAll } = useAssessmentStorage()
   const [currentStep, setCurrentStep] = useState<'select' | 'form'>('select')
-  const panelRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = useReducedMotion()
 
   // Handle URL parameter for equipment type
   useEffect(() => {
@@ -39,30 +41,6 @@ export function AssessmentFlow() {
     }
   }, [clearAll, isLoaded, searchParams])
 
-  useEffect(() => {
-    if (!panelRef.current) {
-      return
-    }
-
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      gsap.set(panelRef.current, { clearProps: 'all', opacity: 1 })
-      return
-    }
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        panelRef.current,
-        { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.42, ease: 'power2.out' }
-      )
-    }, panelRef)
-
-    return () => ctx.revert()
-  }, [currentStep, data.selectedEquipment])
-
   const handleEquipmentSelect = (equipmentId: string) => {
     updateSelectedEquipment(equipmentId)
     setCurrentStep('form')
@@ -79,14 +57,7 @@ export function AssessmentFlow() {
   }
 
   if (!isLoaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <span className="text-muted-foreground">Loading your data...</span>
-        </div>
-      </div>
-    )
+    return <AssessmentLoadingState />
   }
 
   const renderForm = () => {
@@ -112,18 +83,23 @@ export function AssessmentFlow() {
     <div className="min-h-screen bg-background">
       <AssessmentHeader />
       
-      <main className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-8 md:px-6 md:py-12">
-        <div
-          ref={panelRef}
-          key={`${currentStep}-${data.selectedEquipment ?? 'none'}`}
-          className="will-change-transform"
-        >
-          {currentStep === 'select' ? (
-            <EquipmentSelector onSelect={handleEquipmentSelect} />
-          ) : (
-            renderForm()
-          )}
-        </div>
+      <main className="mx-auto max-w-5xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-12">
+        <AnimatePresence mode="wait" initial={!prefersReducedMotion}>
+          <motion.div
+            key={`${currentStep}-${data.selectedEquipment ?? 'none'}`}
+            initial={prefersReducedMotion ? false : 'hidden'}
+            animate="visible"
+            exit={prefersReducedMotion ? undefined : 'exit'}
+            variants={fadeUpVariants}
+            className="will-change-transform"
+          >
+            {currentStep === 'select' ? (
+              <EquipmentSelector onSelect={handleEquipmentSelect} />
+            ) : (
+              renderForm()
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   )

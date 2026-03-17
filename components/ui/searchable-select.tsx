@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ interface SearchableSelectProps {
   className?: string
 }
 
-export function SearchableSelect({
+function SearchableSelectComponent({
   value,
   onValueChange,
   options,
@@ -43,7 +43,37 @@ export function SearchableSelect({
   className,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false)
-  const selectedOption = options.find((option) => option.value === value)
+  const [searchQuery, setSearchQuery] = useState('')
+  const deferredQuery = useDeferredValue(searchQuery)
+  const selectedOption = useMemo(
+    () => options.find((option) => option.value === value),
+    [options, value]
+  )
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) {
+      return options
+    }
+
+    return options.filter((option) => {
+      const searchableText = [
+        option.label,
+        option.description ?? '',
+        ...(option.keywords ?? []),
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      return searchableText.includes(normalizedQuery)
+    })
+  }, [deferredQuery, options])
+
+  useEffect(() => {
+    if (!open && searchQuery) {
+      setSearchQuery('')
+    }
+  }, [open, searchQuery])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -62,15 +92,18 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            placeholder={searchPlaceholder}
+          />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
-            {options.map((option) => (
+            {filteredOptions.length === 0 ? <CommandEmpty>{emptyText}</CommandEmpty> : null}
+            {filteredOptions.map((option) => (
               <CommandItem
                 key={option.value}
-                value={`${option.label} ${option.description ?? ''}`}
-                keywords={option.keywords}
+                value={option.value}
                 onSelect={() => {
                   onValueChange(option.value)
                   setOpen(false)
@@ -98,3 +131,5 @@ export function SearchableSelect({
     </Popover>
   )
 }
+
+export const SearchableSelect = memo(SearchableSelectComponent)

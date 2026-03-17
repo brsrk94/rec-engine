@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
+import { useReducedMotion, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { gsap } from 'gsap'
 import { ArrowLeft, ArrowRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +21,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
 import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
-import { animateAssessmentScreen } from './animations'
+import { fadeUpVariants } from '@/components/motion/variants'
 import { AssessmentEquipmentImage } from './equipment-image'
 
 const fanTypes = [
@@ -38,16 +37,8 @@ interface BLDCFanFormProps {
 export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
   const router = useRouter()
   const { data, updateBLDCFan } = useAssessmentStorage()
-  const formRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = useReducedMotion()
   const fan = data.bldc_fan
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      animateAssessmentScreen(formRef.current)
-    }, formRef)
-
-    return () => ctx.revert()
-  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,7 +51,11 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
 
   return (
     <TooltipProvider>
-      <div ref={formRef}>
+      <motion.div
+        initial={prefersReducedMotion ? false : 'hidden'}
+        animate="visible"
+        variants={fadeUpVariants}
+      >
         <div className="mb-8 flex items-start gap-3 sm:items-center sm:gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
@@ -222,7 +217,7 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
             </Button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </TooltipProvider>
   )
 }

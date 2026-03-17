@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { gsap } from 'gsap'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
-import type { MotorCatalogPayload } from '@/lib/motor-catalog'
+import { useMotorCatalog } from '@/hooks/use-motor-catalog'
 import { cn } from '@/lib/utils'
 import {
   findRecommendedTargetMotor,
@@ -28,7 +28,7 @@ import {
   getRecommendedTargetClass,
   normalizeMotorRatingToKw,
 } from '@/lib/motor-catalog'
-import { animateAssessmentScreen } from './animations'
+import { fadeUpVariants } from '@/components/motion/variants'
 import { AssessmentEquipmentImage } from './equipment-image'
 
 interface MotorFormProps {
@@ -71,59 +71,14 @@ function InputWithSuffix({
 export function MotorForm({ onBack }: MotorFormProps) {
   const router = useRouter()
   const { data, updateMotor } = useAssessmentStorage()
-  const formRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = useReducedMotion()
   const motor = data.motor
-
-  const [catalog, setCatalog] = useState<MotorCatalogPayload | null>(null)
-  const [catalogError, setCatalogError] = useState<string | null>(null)
-  const [isCatalogLoading, setIsCatalogLoading] = useState(true)
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      animateAssessmentScreen(formRef.current)
-    }, formRef)
-
-    return () => ctx.revert()
-  }, [])
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function loadCatalog() {
-      try {
-        setIsCatalogLoading(true)
-        setCatalogError(null)
-
-        const response = await fetch('/api/catalog/motors')
-
-        if (!response.ok) {
-          throw new Error('Unable to load the motor catalog.')
-        }
-
-        const payload = (await response.json()) as MotorCatalogPayload
-
-        if (isMounted) {
-          setCatalog(payload)
-        }
-      } catch (error) {
-        if (isMounted) {
-          setCatalogError(
-            error instanceof Error ? error.message : 'Unable to load the motor catalog.'
-          )
-        }
-      } finally {
-        if (isMounted) {
-          setIsCatalogLoading(false)
-        }
-      }
-    }
-
-    loadCatalog()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  const {
+    catalog,
+    errorMessage: catalogError,
+    isLoading: isCatalogLoading,
+    reload: reloadCatalog,
+  } = useMotorCatalog()
 
   const selectedCatalogMotor = useMemo(() => {
     if (!catalog || !motor.motor_make || !motor.motor_model) {
@@ -331,7 +286,12 @@ export function MotorForm({ onBack }: MotorFormProps) {
     availableTargetClasses[0] === selectedCatalogMotor.efficiency_class
 
   return (
-      <div ref={formRef} className="w-full">
+      <motion.div
+        className="w-full"
+        initial={prefersReducedMotion ? false : 'hidden'}
+        animate="visible"
+        variants={fadeUpVariants}
+      >
         <div className="mb-5 flex items-start gap-3 sm:mb-8 sm:items-center sm:gap-4">
           <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
@@ -447,11 +407,17 @@ export function MotorForm({ onBack }: MotorFormProps) {
                         updateMotor({ capex_of_current_motor_class: event.target.value })
                       }
                       suffix="INR/kW"
+                      suffixClassName="right-2 text-[9px] normal-case tracking-normal sm:right-3 sm:text-[10px]"
                     />
                   </Field>
 
                   {catalogError ? (
-                    <p className="text-sm text-destructive">{catalogError}</p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-destructive">{catalogError}</p>
+                      <Button type="button" variant="outline" size="sm" onClick={reloadCatalog}>
+                        Retry Catalog
+                      </Button>
+                    </div>
                   ) : null}
                 </FieldGroup>
               </CardContent>
@@ -525,6 +491,7 @@ export function MotorForm({ onBack }: MotorFormProps) {
                         updateMotor({ capex_of_target_motor_class: event.target.value })
                       }
                       suffix="INR/kW"
+                      suffixClassName="right-2 text-[9px] normal-case tracking-normal sm:right-3 sm:text-[10px]"
                     />
                   </Field>
                 </FieldGroup>
@@ -557,7 +524,8 @@ export function MotorForm({ onBack }: MotorFormProps) {
                         min="0"
                         value={motor.operating_hours_year}
                         onChange={(event) => updateMotor({ operating_hours_year: event.target.value })}
-                        suffix="HR/YR"
+                        suffix="hr/year"
+                        suffixClassName="right-2 text-[9px] normal-case tracking-normal sm:right-3 sm:text-[10px]"
                       />
                     </Field>
 
@@ -581,6 +549,7 @@ export function MotorForm({ onBack }: MotorFormProps) {
                         value={motor.electricity_tariff}
                         onChange={(event) => updateMotor({ electricity_tariff: event.target.value })}
                         suffix="INR/kWh"
+                        suffixClassName="right-2 text-[9px] normal-case tracking-normal sm:right-3 sm:text-[10px]"
                       />
                     </Field>
 
@@ -614,6 +583,6 @@ export function MotorForm({ onBack }: MotorFormProps) {
             </Button>
           </div>
         </form>
-      </div>
+      </motion.div>
   )
 }

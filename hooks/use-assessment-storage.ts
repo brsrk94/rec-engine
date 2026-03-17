@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { MotorCatalogItem } from '@/lib/motor-catalog'
 
 export interface MotorAssessment {
@@ -30,7 +30,6 @@ export interface CompressorAssessment {
   compressor_rating_unit: 'kW' | 'HP'
   current_compressor_type: string
   years_of_operation_current_compressor: string
-  compressor_energy_saving_priority: 'Yes' | 'No'
   target_compressor_type: string
   target_compressor_rating: string
   target_compressor_rating_unit: 'kW' | 'HP'
@@ -39,6 +38,9 @@ export interface CompressorAssessment {
   compressor_operating_hours_year: string
   compressor_electricity_tariff: string
   compressor_grid_emission_factor: string
+  compressor_energy_consumption: string
+  capex_of_current_compressor: string
+  capex_of_target_compressor: string
 }
 
 export interface BLDCFanAssessment {
@@ -88,7 +90,12 @@ export interface AssessmentData {
 
 const STORAGE_KEY = 'fitsol_assessment_data'
 
-const defaultMotorAssessment: MotorAssessment = {
+type PersistJob = {
+  type: 'idle' | 'timeout'
+  handle: number
+}
+
+const initialMotorAssessment: MotorAssessment = {
   motor_make: '',
   motor_model: '',
   motor_rating: '',
@@ -108,25 +115,27 @@ const defaultMotorAssessment: MotorAssessment = {
   target_catalog_motor: null,
 }
 
-const defaultCompressorAssessment: CompressorAssessment = {
+const initialCompressorAssessment: CompressorAssessment = {
   compressor_make: '',
   compressor_model: '',
   compressor_rating: '',
   compressor_rating_unit: 'kW',
   current_compressor_type: '',
   years_of_operation_current_compressor: '',
-  compressor_energy_saving_priority: 'Yes',
   target_compressor_type: '',
-  target_compressor_rating: '90',
+  target_compressor_rating: '',
   target_compressor_rating_unit: 'kW',
   lifetime_of_target_compressor: '10',
   compressor_load_factor: '80',
   compressor_operating_hours_year: '',
-  compressor_electricity_tariff: '7',
+  compressor_electricity_tariff: '',
   compressor_grid_emission_factor: '0.71',
+  compressor_energy_consumption: '',
+  capex_of_current_compressor: '',
+  capex_of_target_compressor: '',
 }
 
-const defaultBLDCFanAssessment: BLDCFanAssessment = {
+const initialBLDCFanAssessment: BLDCFanAssessment = {
   current_fan_type: '',
   number_of_fans: '1',
   operating_hours_year: '',
@@ -134,7 +143,7 @@ const defaultBLDCFanAssessment: BLDCFanAssessment = {
   current_wattage: '75',
 }
 
-const defaultAirConditionerAssessment: AirConditionerAssessment = {
+const initialAirConditionerAssessment: AirConditionerAssessment = {
   current_ac_type: '',
   tonnage: '',
   number_of_units: '1',
@@ -144,7 +153,7 @@ const defaultAirConditionerAssessment: AirConditionerAssessment = {
   years_of_operation: '',
 }
 
-const defaultLEDRetrofitAssessment: LEDRetrofitAssessment = {
+const initialLedRetrofitAssessment: LEDRetrofitAssessment = {
   current_lighting_type: '',
   number_of_fixtures: '',
   wattage_per_fixture: '',
@@ -152,7 +161,7 @@ const defaultLEDRetrofitAssessment: LEDRetrofitAssessment = {
   electricity_tariff: '8',
 }
 
-const defaultDGSetAssessment: DGSetAssessment = {
+const initialDgSetAssessment: DGSetAssessment = {
   dg_capacity_kva: '',
   current_loading_percent: '70',
   operating_hours_year: '',
@@ -161,75 +170,241 @@ const defaultDGSetAssessment: DGSetAssessment = {
   years_of_operation: '',
 }
 
-const defaultAssessmentData: AssessmentData = {
+const initialAssessmentState: AssessmentData = {
   selectedEquipment: null,
-  motor: defaultMotorAssessment,
-  compressor: defaultCompressorAssessment,
-  bldc_fan: defaultBLDCFanAssessment,
-  air_conditioner: defaultAirConditionerAssessment,
-  led_retrofit: defaultLEDRetrofitAssessment,
-  dg_set: defaultDGSetAssessment,
+  motor: initialMotorAssessment,
+  compressor: initialCompressorAssessment,
+  bldc_fan: initialBLDCFanAssessment,
+  air_conditioner: initialAirConditionerAssessment,
+  led_retrofit: initialLedRetrofitAssessment,
+  dg_set: initialDgSetAssessment,
+}
+
+function readAssessmentDraft() {
+  try {
+    const storedDraft = sessionStorage.getItem(STORAGE_KEY)
+
+    if (!storedDraft) {
+      return initialAssessmentState
+    }
+
+    return { ...initialAssessmentState, ...JSON.parse(storedDraft) } as AssessmentData
+  } catch (error) {
+    console.warn('Fitsol: unable to read assessment draft from session storage.', error)
+    return initialAssessmentState
+  }
+}
+
+function persistAssessmentDraft(nextDraft: AssessmentData) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(nextDraft))
+  } catch (error) {
+    console.warn('Fitsol: unable to persist assessment draft.', error)
+  }
+}
+
+function mergeChangedFields<T extends object>(
+  currentBranch: T,
+  updates: Partial<T>
+) {
+  let nextBranch: T | null = null
+
+  for (const key of Object.keys(updates) as Array<keyof T>) {
+    const nextValue = updates[key]
+
+    if (Object.is(currentBranch[key], nextValue)) {
+      continue
+    }
+
+    if (!nextBranch) {
+      nextBranch = { ...currentBranch }
+    }
+
+    nextBranch[key] = nextValue as T[keyof T]
+  }
+
+  return nextBranch ?? currentBranch
+}
+
+function scheduleDraftPersist(task: () => void): PersistJob {
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    return {
+      type: 'idle',
+      handle: window.requestIdleCallback(task, { timeout: 280 }),
+    }
+  }
+
+  return {
+    type: 'timeout',
+    handle: window.setTimeout(task, 180),
+  }
+}
+
+function cancelDraftPersist(job: PersistJob) {
+  if (job.type === 'idle' && typeof window.cancelIdleCallback === 'function') {
+    window.cancelIdleCallback(job.handle)
+    return
+  }
+
+  window.clearTimeout(job.handle)
 }
 
 export function useAssessmentStorage() {
-  const [data, setData] = useState<AssessmentData>(defaultAssessmentData)
+  const [data, setData] = useState<AssessmentData>(initialAssessmentState)
   const [isLoaded, setIsLoaded] = useState(false)
+  const latestDraftRef = useRef<AssessmentData>(initialAssessmentState)
+  const pendingPersistJobRef = useRef<PersistJob | null>(null)
 
-  // Load from sessionStorage on mount
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setData({ ...defaultAssessmentData, ...parsed })
-      }
-    } catch {
-      console.error('Failed to load assessment data from storage')
-    }
+    setData(readAssessmentDraft())
     setIsLoaded(true)
   }, [])
 
-  // Save to sessionStorage whenever data changes
   useEffect(() => {
-    if (isLoaded) {
-      try {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-      } catch {
-        console.error('Failed to save assessment data to storage')
+    latestDraftRef.current = data
+  }, [data])
+
+  const flushDraft = useCallback(() => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (pendingPersistJobRef.current) {
+      cancelDraftPersist(pendingPersistJobRef.current)
+      pendingPersistJobRef.current = null
+    }
+
+    persistAssessmentDraft(latestDraftRef.current)
+  }, [isLoaded])
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (pendingPersistJobRef.current) {
+      cancelDraftPersist(pendingPersistJobRef.current)
+    }
+
+    pendingPersistJobRef.current = scheduleDraftPersist(() => {
+      pendingPersistJobRef.current = null
+      persistAssessmentDraft(latestDraftRef.current)
+    })
+
+    return () => {
+      if (pendingPersistJobRef.current) {
+        cancelDraftPersist(pendingPersistJobRef.current)
+        pendingPersistJobRef.current = null
       }
     }
   }, [data, isLoaded])
 
+  useEffect(() => {
+    if (!isLoaded || typeof window === 'undefined') {
+      return
+    }
+
+    const handlePageHide = () => {
+      flushDraft()
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+    }
+  }, [flushDraft, isLoaded])
+
   const updateSelectedEquipment = useCallback((equipment: string | null) => {
-    setData(prev => ({ ...prev, selectedEquipment: equipment }))
+    setData((previousData) => {
+      if (previousData.selectedEquipment === equipment) {
+        return previousData
+      }
+
+      return { ...previousData, selectedEquipment: equipment }
+    })
   }, [])
 
   const updateMotor = useCallback((updates: Partial<MotorAssessment>) => {
-    setData(prev => ({ ...prev, motor: { ...prev.motor, ...updates } }))
+    setData((previousData) => {
+      const nextMotor = mergeChangedFields(previousData.motor, updates)
+
+      if (nextMotor === previousData.motor) {
+        return previousData
+      }
+
+      return { ...previousData, motor: nextMotor }
+    })
   }, [])
 
   const updateCompressor = useCallback((updates: Partial<CompressorAssessment>) => {
-    setData(prev => ({ ...prev, compressor: { ...prev.compressor, ...updates } }))
+    setData((previousData) => {
+      const nextCompressor = mergeChangedFields(previousData.compressor, updates)
+
+      if (nextCompressor === previousData.compressor) {
+        return previousData
+      }
+
+      return { ...previousData, compressor: nextCompressor }
+    })
   }, [])
 
   const updateBLDCFan = useCallback((updates: Partial<BLDCFanAssessment>) => {
-    setData(prev => ({ ...prev, bldc_fan: { ...prev.bldc_fan, ...updates } }))
+    setData((previousData) => {
+      const nextFan = mergeChangedFields(previousData.bldc_fan, updates)
+
+      if (nextFan === previousData.bldc_fan) {
+        return previousData
+      }
+
+      return { ...previousData, bldc_fan: nextFan }
+    })
   }, [])
 
   const updateAirConditioner = useCallback((updates: Partial<AirConditionerAssessment>) => {
-    setData(prev => ({ ...prev, air_conditioner: { ...prev.air_conditioner, ...updates } }))
+    setData((previousData) => {
+      const nextAirConditioner = mergeChangedFields(previousData.air_conditioner, updates)
+
+      if (nextAirConditioner === previousData.air_conditioner) {
+        return previousData
+      }
+
+      return { ...previousData, air_conditioner: nextAirConditioner }
+    })
   }, [])
 
   const updateLEDRetrofit = useCallback((updates: Partial<LEDRetrofitAssessment>) => {
-    setData(prev => ({ ...prev, led_retrofit: { ...prev.led_retrofit, ...updates } }))
+    setData((previousData) => {
+      const nextLighting = mergeChangedFields(previousData.led_retrofit, updates)
+
+      if (nextLighting === previousData.led_retrofit) {
+        return previousData
+      }
+
+      return { ...previousData, led_retrofit: nextLighting }
+    })
   }, [])
 
   const updateDGSet = useCallback((updates: Partial<DGSetAssessment>) => {
-    setData(prev => ({ ...prev, dg_set: { ...prev.dg_set, ...updates } }))
+    setData((previousData) => {
+      const nextDgSet = mergeChangedFields(previousData.dg_set, updates)
+
+      if (nextDgSet === previousData.dg_set) {
+        return previousData
+      }
+
+      return { ...previousData, dg_set: nextDgSet }
+    })
   }, [])
 
   const clearAll = useCallback(() => {
-    setData(defaultAssessmentData)
+    if (pendingPersistJobRef.current) {
+      cancelDraftPersist(pendingPersistJobRef.current)
+      pendingPersistJobRef.current = null
+    }
+
+    latestDraftRef.current = initialAssessmentState
+    setData(initialAssessmentState)
     sessionStorage.removeItem(STORAGE_KEY)
   }, [])
 

@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
-import { gsap } from 'gsap'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight } from 'lucide-react'
 import { 
   Select,
@@ -15,6 +14,12 @@ import {
   AssessmentEquipmentImage,
   type AssessmentEquipmentId,
 } from './equipment-image'
+import {
+  fadeUpVariants,
+  smoothTransition,
+  staggerContainerVariants,
+  staggerItemVariants,
+} from '@/components/motion/variants'
 
 const equipmentOptions = [
   {
@@ -54,52 +59,27 @@ interface EquipmentSelectorProps {
 }
 
 export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
-  const selectRef = useRef<HTMLDivElement>(null)
-  const cardsRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: 'power2.out' } })
-
-      tl.fromTo(
-        headerRef.current,
-        { opacity: 0, y: 28 },
-        { opacity: 1, y: 0, duration: 0.68 }
-      )
-        .fromTo(
-          selectRef.current,
-          { opacity: 0, y: 18 },
-          { opacity: 1, y: 0, duration: 0.5 },
-          '-=0.4'
-        )
-        .fromTo(
-          cardsRef.current?.children || [],
-          { opacity: 0, y: 22, scale: 0.985 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.48, stagger: 0.08 },
-          '-=0.34'
-        )
-    }, containerRef)
-
-    return () => ctx.revert()
-  }, [])
+  const prefersReducedMotion = useReducedMotion()
 
   return (
-    <div ref={containerRef}>
-      <div ref={headerRef} className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+    <motion.div
+      initial={prefersReducedMotion ? false : 'hidden'}
+      animate="visible"
+      variants={staggerContainerVariants}
+    >
+      <motion.div variants={fadeUpVariants} className="mb-7 text-center sm:mb-8">
+        <h1 className="text-[1.7rem] font-bold tracking-tight sm:text-3xl md:text-4xl">
           Energy Efficiency Assessment
         </h1>
-        <p className="mt-3 text-lg text-muted-foreground">
+        <p className="mt-2.5 text-sm leading-6 text-muted-foreground sm:mt-3 sm:text-lg">
           Select the equipment type you want to assess
         </p>
-      </div>
+      </motion.div>
 
       {/* Dropdown selector for mobile */}
-      <div ref={selectRef} className="mb-8 md:hidden">
+      <motion.div variants={fadeUpVariants} className="mb-8 md:hidden">
         <Select onValueChange={onSelect}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="h-12 w-full text-left">
             <SelectValue placeholder="Choose equipment type..." />
           </SelectTrigger>
           <SelectContent>
@@ -118,47 +98,53 @@ export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </motion.div>
 
       {/* Card grid for desktop */}
-      <div
-        ref={cardsRef}
+      <motion.div
+        variants={staggerContainerVariants}
         className="hidden grid-cols-2 gap-4 md:grid lg:grid-cols-3"
       >
         {equipmentOptions.map((option) => (
-          <Card
+          <motion.div
             key={option.id}
-            className="group cursor-pointer border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg"
-            onClick={() => onSelect(option.id)}
+            variants={staggerItemVariants}
+            whileHover={prefersReducedMotion ? undefined : { y: -2 }}
+            transition={smoothTransition}
           >
-            <CardHeader className="gap-4 pb-3">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/8 ring-1 ring-primary/10">
-                  <AssessmentEquipmentImage
-                    equipmentId={option.id as AssessmentEquipmentId}
-                    className="h-9 w-9 rounded-lg border-0 bg-transparent"
-                    roundedClassName="rounded-lg"
-                    imageClassName="transition-transform duration-300 ease-out group-hover:scale-[1.04]"
-                    sizes="36px"
-                    priority={option.id === 'motor'}
-                  />
+            <Card
+              className="group cursor-pointer border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:border-primary/35 hover:shadow-lg"
+              onClick={() => onSelect(option.id)}
+            >
+              <CardHeader className="gap-4 pb-3">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/8 ring-1 ring-primary/10">
+                    <AssessmentEquipmentImage
+                      equipmentId={option.id as AssessmentEquipmentId}
+                      className="h-9 w-9 rounded-lg border-0 bg-transparent"
+                      roundedClassName="rounded-lg"
+                      imageClassName="transition-transform duration-300 ease-out group-hover:scale-[1.04]"
+                      sizes="36px"
+                      priority={option.id === 'motor'}
+                    />
+                  </div>
+                  <CardTitle className="flex min-w-0 flex-1 items-start justify-between gap-3 text-lg leading-snug">
+                    <span>{option.name}</span>
+                    <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-out group-hover:translate-x-0.5 group-hover:text-primary" />
+                  </CardTitle>
                 </div>
-                <CardTitle className="flex min-w-0 flex-1 items-start justify-between gap-3 text-lg leading-snug">
-                  <span>{option.name}</span>
-                  <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-out group-hover:translate-x-0.5 group-hover:text-primary" />
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>{option.description}</CardDescription>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{option.description}</CardDescription>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
-      <p className="text-center text-sm text-muted-foreground md:hidden">
+      <motion.p variants={fadeUpVariants} className="text-center text-xs leading-5 text-muted-foreground md:hidden">
         Choose the equipment from the dropdown above to continue.
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   )
 }

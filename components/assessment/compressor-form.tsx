@@ -1,12 +1,15 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { gsap } from 'gsap'
-import { ArrowLeft, ArrowRight, Info } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import {
   Select,
   SelectContent,
@@ -14,393 +17,697 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
-import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
-import { animateAssessmentScreen } from './animations'
+import { useCompressorCatalog } from '@/hooks/use-compressor-catalog'
+import {
+  COMPRESSOR_TYPE_OPTIONS,
+  getDefaultCompressorCapex,
+  getSuggestedTargetCompressorType,
+  normalizeCompressorRatingToKw,
+} from '@/lib/assessment/compressor-benchmarks'
+import type { CompressorCatalogItem } from '@/lib/compressor-catalog'
+import { cn } from '@/lib/utils'
+import { fadeUpVariants } from '@/components/motion/variants'
 import { AssessmentEquipmentImage } from './equipment-image'
-
-const compressorMakes = [
-  'Atlas Copco', 'Ingersoll Rand', 'ELGi', 'Kirloskar', 'Kaeser', 'Chicago Pneumatic', 'Other'
-]
-
-const compressorTypes = [
-  { value: 'reciprocating', label: 'Reciprocating (Piston)' },
-  { value: 'fixed_speed_rotary', label: 'Fixed Speed (Rotary Screw)' },
-  { value: 'vsd_rotary', label: 'Variable Speed Drive (Rotary Screw)' },
-  { value: 'centrifugal', label: 'Centrifugal' },
-  { value: 'scroll', label: 'Scroll Compressor' },
-  { value: 'oil_free_screw', label: 'Oil-free Screw Compressor' },
-]
-
-const upgradeRecommendations: Record<string, string> = {
-  'reciprocating': 'vsd_rotary',
-  'fixed_speed_rotary': 'vsd_rotary',
-  'scroll': 'oil_free_screw',
-  'centrifugal': 'centrifugal',
-  'vsd_rotary': 'vsd_rotary',
-  'oil_free_screw': 'oil_free_screw',
-}
 
 interface CompressorFormProps {
   onBack: () => void
 }
 
+const mixedCaseSuffixClassName =
+  'right-2 text-[9px] normal-case tracking-normal sm:right-3 sm:text-[10px]'
+
+function InputWithSuffix({
+  suffix,
+  className,
+  suffixClassName,
+  inputClassName,
+  ...props
+}: React.ComponentProps<typeof Input> & {
+  suffix: string
+  suffixClassName?: string
+  inputClassName?: string
+}) {
+  return (
+    <div className={cn('relative', className)}>
+      <Input
+        {...props}
+        className={cn(
+          'h-10 pr-20 text-sm sm:h-9',
+          suffix.length > 6 && 'pr-24 sm:pr-28',
+          inputClassName
+        )}
+      />
+      <span
+        className={cn(
+          'pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium uppercase tracking-[0.03em] text-muted-foreground sm:text-[11px]',
+          suffixClassName
+        )}
+      >
+        {suffix}
+      </span>
+    </div>
+  )
+}
+
+function formatAutoCalculatedValue(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return ''
+  }
+
+  return value.toFixed(2).replace(/\.?0+$/, '')
+}
+
 export function CompressorForm({ onBack }: CompressorFormProps) {
   const router = useRouter()
   const { data, updateCompressor } = useAssessmentStorage()
-  const formRef = useRef<HTMLDivElement>(null)
+  const { catalog, errorMessage: catalogError, isLoading: isCatalogLoading, reload } =
+    useCompressorCatalog()
+  const prefersReducedMotion = useReducedMotion()
+  const previousAutoCurrentCapex = useRef('')
+  const previousAutoTargetCapex = useRef('')
+  const previousAutoEnergyConsumption = useRef('')
+  const previousMirroredTargetRating = useRef('')
+  const previousMirroredTargetUnit = useRef<'kW' | 'HP'>('kW')
   const compressor = data.compressor
 
+  const selectedCatalogCompressor = useMemo(() => {
+    if (!catalog || !compressor.compressor_make || !compressor.compressor_model) {
+      return null
+    }
+
+    return (
+      catalog.compressors.find(
+        (catalogCompressor) =>
+          catalogCompressor.make === compressor.compressor_make &&
+          catalogCompressor.model === compressor.compressor_model
+      ) ?? null
+    )
+  }, [catalog, compressor.compressor_make, compressor.compressor_model])
+
+  const makeOptions = useMemo(
+    () =>
+      (catalog?.makeCounts ?? []).map(({ make }) => ({
+        value: make,
+        label: make,
+        keywords: [make],
+      })),
+    [catalog]
+  )
+
+  const modelsForSelectedMake = useMemo(
+    () =>
+      Array.from(
+        (catalog?.compressors ?? [])
+          .filter((catalogCompressor) => catalogCompressor.make === compressor.compressor_make)
+          .reduce((uniqueModels, catalogCompressor) => {
+            if (!uniqueModels.has(catalogCompressor.model)) {
+              uniqueModels.set(catalogCompressor.model, catalogCompressor)
+            }
+
+            return uniqueModels
+          }, new Map<string, CompressorCatalogItem>())
+          .values()
+      ),
+    [catalog, compressor.compressor_make]
+  )
+
+  const modelOptions = useMemo(
+    () =>
+      modelsForSelectedMake.map((catalogCompressor) => ({
+        value: catalogCompressor.model,
+        label: catalogCompressor.model,
+        description: `${catalogCompressor.benchmark_type_label} | ${catalogCompressor.rated_power_kw} kW${catalogCompressor.series ? ` | ${catalogCompressor.series}` : ''}`,
+        keywords: [
+          catalogCompressor.model,
+          catalogCompressor.benchmark_type_label,
+          catalogCompressor.compressor_type_label ?? '',
+          catalogCompressor.series ?? '',
+          String(catalogCompressor.rated_power_kw),
+        ],
+      })),
+    [modelsForSelectedMake]
+  )
+
+  const defaultCurrentCapex = useMemo(
+    () =>
+      getDefaultCompressorCapex(
+        compressor.current_compressor_type,
+        compressor.compressor_rating,
+        compressor.compressor_rating_unit
+      ),
+    [
+      compressor.current_compressor_type,
+      compressor.compressor_rating,
+      compressor.compressor_rating_unit,
+    ]
+  )
+
+  const defaultTargetCapex = useMemo(
+    () =>
+      getDefaultCompressorCapex(
+        compressor.target_compressor_type,
+        compressor.target_compressor_rating || compressor.compressor_rating,
+        compressor.target_compressor_rating_unit || compressor.compressor_rating_unit
+      ),
+    [
+      compressor.compressor_rating,
+      compressor.compressor_rating_unit,
+      compressor.target_compressor_rating,
+      compressor.target_compressor_rating_unit,
+      compressor.target_compressor_type,
+    ]
+  )
+
+  const autoCalculatedEnergyConsumption = useMemo(() => {
+    const currentRatingKw = normalizeCompressorRatingToKw(
+      compressor.compressor_rating,
+      compressor.compressor_rating_unit
+    )
+    const operatingHours = Number.parseFloat(compressor.compressor_operating_hours_year)
+
+    if (!Number.isFinite(currentRatingKw) || currentRatingKw <= 0) {
+      return ''
+    }
+
+    if (!Number.isFinite(operatingHours) || operatingHours <= 0) {
+      return ''
+    }
+
+    return formatAutoCalculatedValue(currentRatingKw * operatingHours)
+  }, [
+    compressor.compressor_operating_hours_year,
+    compressor.compressor_rating,
+    compressor.compressor_rating_unit,
+  ])
+
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      animateAssessmentScreen(formRef.current)
-    }, formRef)
+    if (!selectedCatalogCompressor) {
+      return
+    }
 
-    return () => ctx.revert()
-  }, [])
+    updateCompressor({
+      compressor_rating: String(selectedCatalogCompressor.rated_power_kw),
+      compressor_rating_unit: 'kW',
+      current_compressor_type: selectedCatalogCompressor.benchmark_type,
+      capex_of_current_compressor: String(
+        getDefaultCompressorCapex(
+          selectedCatalogCompressor.benchmark_type,
+          selectedCatalogCompressor.rated_power_kw,
+          'kW'
+        ) || ''
+      ),
+    })
+  }, [selectedCatalogCompressor, updateCompressor])
 
-  // Auto-suggest target type based on current type
   useEffect(() => {
     if (compressor.current_compressor_type && !compressor.target_compressor_type) {
-      const recommended = upgradeRecommendations[compressor.current_compressor_type]
-      if (recommended) {
-        updateCompressor({ target_compressor_type: recommended })
+      const suggestedTarget = getSuggestedTargetCompressorType(compressor.current_compressor_type)
+
+      if (suggestedTarget) {
+        updateCompressor({ target_compressor_type: suggestedTarget })
       }
     }
   }, [compressor.current_compressor_type, compressor.target_compressor_type, updateCompressor])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    if (!compressor.compressor_rating) {
+      return
+    }
+
+    const canMirrorTargetRating =
+      !compressor.target_compressor_rating ||
+      compressor.target_compressor_rating === previousMirroredTargetRating.current
+
+    if (canMirrorTargetRating) {
+      previousMirroredTargetRating.current = compressor.compressor_rating
+      updateCompressor({ target_compressor_rating: compressor.compressor_rating })
+    }
+  }, [compressor.compressor_rating, compressor.target_compressor_rating, updateCompressor])
+
+  useEffect(() => {
+    const canMirrorTargetUnit =
+      !compressor.target_compressor_rating ||
+      compressor.target_compressor_rating === previousMirroredTargetRating.current ||
+      compressor.target_compressor_rating_unit === previousMirroredTargetUnit.current
+
+    if (canMirrorTargetUnit) {
+      previousMirroredTargetUnit.current = compressor.compressor_rating_unit
+      updateCompressor({ target_compressor_rating_unit: compressor.compressor_rating_unit })
+    }
+  }, [
+    compressor.compressor_rating,
+    compressor.compressor_rating_unit,
+    compressor.target_compressor_rating,
+    compressor.target_compressor_rating_unit,
+    updateCompressor,
+  ])
+
+  useEffect(() => {
+    const nextAutoCapex = defaultCurrentCapex > 0 ? defaultCurrentCapex.toFixed(0) : ''
+
+    if (!nextAutoCapex) {
+      return
+    }
+
+    const canRefreshAutoCapex =
+      !compressor.capex_of_current_compressor ||
+      compressor.capex_of_current_compressor === previousAutoCurrentCapex.current
+
+    previousAutoCurrentCapex.current = nextAutoCapex
+
+    if (canRefreshAutoCapex) {
+      updateCompressor({ capex_of_current_compressor: nextAutoCapex })
+    }
+  }, [compressor.capex_of_current_compressor, defaultCurrentCapex, updateCompressor])
+
+  useEffect(() => {
+    const nextAutoCapex = defaultTargetCapex > 0 ? defaultTargetCapex.toFixed(0) : ''
+
+    if (!nextAutoCapex) {
+      return
+    }
+
+    const canRefreshAutoCapex =
+      !compressor.capex_of_target_compressor ||
+      compressor.capex_of_target_compressor === previousAutoTargetCapex.current
+
+    previousAutoTargetCapex.current = nextAutoCapex
+
+    if (canRefreshAutoCapex) {
+      updateCompressor({ capex_of_target_compressor: nextAutoCapex })
+    }
+  }, [compressor.capex_of_target_compressor, defaultTargetCapex, updateCompressor])
+
+  useEffect(() => {
+    if (!autoCalculatedEnergyConsumption) {
+      return
+    }
+
+    const canRefreshAutoEnergyConsumption =
+      !compressor.compressor_energy_consumption ||
+      compressor.compressor_energy_consumption === previousAutoEnergyConsumption.current
+
+    previousAutoEnergyConsumption.current = autoCalculatedEnergyConsumption
+
+    if (canRefreshAutoEnergyConsumption) {
+      updateCompressor({
+        compressor_energy_consumption: autoCalculatedEnergyConsumption,
+      })
+    }
+  }, [
+    autoCalculatedEnergyConsumption,
+    compressor.compressor_energy_consumption,
+    updateCompressor,
+  ])
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
     router.push('/assessment/results?type=compressor')
   }
 
-  const isFormValid = () => {
-    return (
-      compressor.compressor_rating &&
-      compressor.current_compressor_type
-    )
+  const handleMakeChange = (value: string) => {
+    updateCompressor({
+      compressor_make: value,
+      compressor_model: '',
+      compressor_rating: '',
+      compressor_rating_unit: 'kW',
+      current_compressor_type: '',
+      capex_of_current_compressor: '',
+      target_compressor_type: '',
+      target_compressor_rating: '',
+      target_compressor_rating_unit: 'kW',
+      capex_of_target_compressor: '',
+    })
   }
 
+  const handleModelChange = (value: string) => {
+    updateCompressor({
+      compressor_model: value,
+    })
+  }
+
+  const isFormValid =
+    compressor.compressor_make &&
+    compressor.compressor_model &&
+    compressor.compressor_rating &&
+    compressor.current_compressor_type &&
+    compressor.target_compressor_type &&
+    compressor.compressor_operating_hours_year &&
+    compressor.compressor_electricity_tariff
+
   return (
-    <TooltipProvider>
-      <div ref={formRef}>
-        {/* Header */}
-        <div className="mb-8 flex items-start gap-3 sm:items-center sm:gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            <AssessmentEquipmentImage equipmentId="compressor" className="h-10 w-10 sm:h-12 sm:w-12" />
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold leading-tight sm:text-2xl">Compressor Assessment</h1>
-              <p className="text-muted-foreground">Enter your current compressor details</p>
-            </div>
+    <motion.div
+      initial={prefersReducedMotion ? false : 'hidden'}
+      animate="visible"
+      variants={fadeUpVariants}
+    >
+      <div className="mb-6 flex items-start gap-3 sm:mb-8 sm:items-center sm:gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <AssessmentEquipmentImage
+            equipmentId="compressor"
+            className="h-10 w-10 shrink-0 sm:h-12 sm:w-12"
+          />
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold leading-tight sm:text-2xl">
+              Compressor Assessment
+            </h1>
           </div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Current Equipment */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Compressor Details</CardTitle>
-                <CardDescription>
-                  Information about your existing compressor installation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel>Compressor Make</FieldLabel>
-                      <Select
-                        value={compressor.compressor_make}
-                        onValueChange={(value) => updateCompressor({ compressor_make: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select make" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {compressorMakes.map((make) => (
-                            <SelectItem key={make} value={make}>
-                              {make}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="gap-4 overflow-hidden py-4 sm:gap-6 sm:py-6">
+            <CardHeader className="grid-rows-[auto] gap-0 px-4 sm:px-6">
+              <CardTitle>Current Equipment</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-6">
+              <FieldGroup className="gap-5 sm:gap-6">
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Equipment Make</FieldLabel>
+                  <SearchableSelect
+                    value={compressor.compressor_make}
+                    onValueChange={handleMakeChange}
+                    options={makeOptions}
+                    placeholder={isCatalogLoading ? 'Loading makes...' : 'Choose make'}
+                    searchPlaceholder="Search make"
+                    emptyText="No makes found"
+                    disabled={isCatalogLoading || makeOptions.length === 0}
+                    className="h-10 text-sm sm:h-9"
+                  />
+                </Field>
 
-                    <Field>
-                      <FieldLabel>Compressor Model</FieldLabel>
-                      <Input
-                        placeholder="e.g., GA37"
-                        value={compressor.compressor_model}
-                        onChange={(e) => updateCompressor({ compressor_model: e.target.value })}
-                      />
-                    </Field>
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Equipment Model</FieldLabel>
+                  <SearchableSelect
+                    value={compressor.compressor_model}
+                    onValueChange={handleModelChange}
+                    options={modelOptions}
+                    placeholder={
+                      compressor.compressor_make ? 'Choose model' : 'Choose make first'
+                    }
+                    searchPlaceholder="Search model"
+                    emptyText="No models found"
+                    disabled={!compressor.compressor_make || modelOptions.length === 0}
+                    className="h-10 text-sm sm:h-9"
+                  />
+                </Field>
+
+                {catalogError ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-destructive">{catalogError}</p>
+                    <Button type="button" variant="outline" size="sm" onClick={reload}>
+                      Retry Catalog
+                    </Button>
                   </div>
+                ) : null}
 
-                  <Field>
-                    <FieldLabel className="flex items-center gap-1">
-                      Current Compressor Type *
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>The technology type of your current compressor</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </FieldLabel>
-                    <Select
-                      value={compressor.current_compressor_type}
-                      onValueChange={(value) => updateCompressor({ current_compressor_type: value })}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {compressorTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Current Compressor Type</FieldLabel>
+                  <Select
+                    value={compressor.current_compressor_type}
+                    onValueChange={(value) =>
+                      updateCompressor({
+                        current_compressor_type: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full text-sm sm:h-9">
+                      <SelectValue placeholder="Select compressor type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMPRESSOR_TYPE_OPTIONS.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel className="flex items-center gap-1">
-                        Rated Capacity *
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Motor power rating of the compressor</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </FieldLabel>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          placeholder="e.g., 37"
-                          value={compressor.compressor_rating}
-                          onChange={(e) => updateCompressor({ compressor_rating: e.target.value })}
-                          className="flex-1"
-                          required
-                        />
-                        <Select
-                          value={compressor.compressor_rating_unit}
-                          onValueChange={(value: 'kW' | 'HP') => updateCompressor({ compressor_rating_unit: value })}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="kW">kW</SelectItem>
-                            <SelectItem value="HP">HP</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </Field>
-
-                    <Field>
-                      <FieldLabel>Compressor Age (years)</FieldLabel>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 8"
-                        value={compressor.years_of_operation_current_compressor}
-                        onChange={(e) => updateCompressor({ years_of_operation_current_compressor: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-                </FieldGroup>
-              </CardContent>
-            </Card>
-
-            {/* Operating Parameters */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Operating Parameters</CardTitle>
-                <CardDescription>
-                  How your compressor is used in your facility
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel className="flex items-center gap-1">
-                      Operating Hours per Year
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Total annual running hours</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </FieldLabel>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 6000"
-                      value={compressor.compressor_operating_hours_year}
-                      onChange={(e) => updateCompressor({ compressor_operating_hours_year: e.target.value })}
-                    />
-                  </Field>
-
-                  <Field>
-                    <FieldLabel className="flex items-center gap-1">
-                      Load Factor (%)
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Average loading of compressor capacity</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </FieldLabel>
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Current Rated Capacity</FieldLabel>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_104px]">
                     <Input
                       type="number"
                       min="0"
-                      max="100"
-                      value={compressor.compressor_load_factor}
-                      onChange={(e) => updateCompressor({ compressor_load_factor: e.target.value })}
+                      step="0.01"
+                      value={compressor.compressor_rating}
+                      onChange={(event) =>
+                        updateCompressor({ compressor_rating: event.target.value })
+                      }
+                      placeholder="Enter capacity"
+                      className="h-10 text-sm sm:h-9"
                     />
-                  </Field>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel>Electricity Tariff (INR/kWh)</FieldLabel>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={compressor.compressor_electricity_tariff}
-                        onChange={(e) => updateCompressor({ compressor_electricity_tariff: e.target.value })}
-                      />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel>Grid Emission Factor (kgCO2/kWh)</FieldLabel>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={compressor.compressor_grid_emission_factor}
-                        onChange={(e) => updateCompressor({ compressor_grid_emission_factor: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-
-                  <Field>
-                    <FieldLabel>Energy Saving Priority</FieldLabel>
                     <Select
-                      value={compressor.compressor_energy_saving_priority}
-                      onValueChange={(value: 'Yes' | 'No') => updateCompressor({ compressor_energy_saving_priority: value })}
+                      value={compressor.compressor_rating_unit}
+                      onValueChange={(value: 'kW' | 'HP') =>
+                        updateCompressor({ compressor_rating_unit: value })
+                      }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 w-full text-sm sm:h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Yes">Yes - Prioritize energy efficiency</SelectItem>
-                        <SelectItem value="No">No - Balance cost and efficiency</SelectItem>
+                        <SelectItem value="kW">kW</SelectItem>
+                        <SelectItem value="HP">HP</SelectItem>
                       </SelectContent>
                     </Select>
-                  </Field>
-                </FieldGroup>
-              </CardContent>
-            </Card>
-
-            {/* Target Upgrade */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Target Upgrade</CardTitle>
-                <CardDescription>
-                  Specify your upgrade preferences (optional - we will recommend the best option)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <Field>
-                      <FieldLabel>Target Compressor Type</FieldLabel>
-                      <Select
-                        value={compressor.target_compressor_type}
-                        onValueChange={(value) => updateCompressor({ target_compressor_type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Auto-recommended" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {compressorTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-
-                    <Field>
-                      <FieldLabel>Target Capacity</FieldLabel>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          placeholder="e.g., 90"
-                          value={compressor.target_compressor_rating}
-                          onChange={(e) => updateCompressor({ target_compressor_rating: e.target.value })}
-                          className="flex-1"
-                        />
-                        <Select
-                          value={compressor.target_compressor_rating_unit}
-                          onValueChange={(value: 'kW' | 'HP') => updateCompressor({ target_compressor_rating_unit: value })}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="kW">kW</SelectItem>
-                            <SelectItem value="HP">HP</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </Field>
-
-                    <Field>
-                      <FieldLabel>Target Lifetime (years)</FieldLabel>
-                      <Input
-                        type="number"
-                        value={compressor.lifetime_of_target_compressor}
-                        onChange={(e) => updateCompressor({ lifetime_of_target_compressor: e.target.value })}
-                      />
-                    </Field>
                   </div>
-                </FieldGroup>
-              </CardContent>
-            </Card>
-          </div>
+                </Field>
 
-          {/* Actions */}
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-between">
-            <Button type="button" variant="outline" onClick={onBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Change Equipment
-            </Button>
-            <Button type="submit" disabled={!isFormValid()} className="sm:min-w-[200px]">
-              Get Recommendations
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </form>
-      </div>
-    </TooltipProvider>
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Age of Current Compressor</FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    value={compressor.years_of_operation_current_compressor}
+                    onChange={(event) =>
+                      updateCompressor({
+                        years_of_operation_current_compressor: event.target.value,
+                      })
+                    }
+                    suffix="yr"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">
+                    Capex of Current Compressor Type
+                  </FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={compressor.capex_of_current_compressor}
+                    onChange={(event) =>
+                      updateCompressor({ capex_of_current_compressor: event.target.value })
+                    }
+                    suffix="INR"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-4 overflow-hidden py-4 sm:gap-6 sm:py-6">
+            <CardHeader className="grid-rows-[auto] gap-0 px-4 sm:px-6">
+              <CardTitle>Target Equipment</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-6">
+              <FieldGroup className="gap-5 sm:gap-6">
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Target Compressor Type</FieldLabel>
+                  <Select
+                    value={compressor.target_compressor_type}
+                    onValueChange={(value) =>
+                      updateCompressor({ target_compressor_type: value })
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full text-sm sm:h-9">
+                      <SelectValue placeholder="Select target type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMPRESSOR_TYPE_OPTIONS.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">
+                    Rated Capacity - Target Compressor
+                  </FieldLabel>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_104px]">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={compressor.target_compressor_rating}
+                      onChange={(event) =>
+                        updateCompressor({ target_compressor_rating: event.target.value })
+                      }
+                      placeholder="Enter capacity"
+                      className="h-10 text-sm sm:h-9"
+                    />
+                    <Select
+                      value={compressor.target_compressor_rating_unit}
+                      onValueChange={(value: 'kW' | 'HP') =>
+                        updateCompressor({ target_compressor_rating_unit: value })
+                      }
+                    >
+                      <SelectTrigger className="h-10 w-full text-sm sm:h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kW">kW</SelectItem>
+                        <SelectItem value="HP">HP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">
+                    Lifetime of Target Compressor
+                  </FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    value={compressor.lifetime_of_target_compressor}
+                    onChange={(event) =>
+                      updateCompressor({ lifetime_of_target_compressor: event.target.value })
+                    }
+                    suffix="yr"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">
+                    Capex of Target Compressor Type
+                  </FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={compressor.capex_of_target_compressor}
+                    onChange={(event) =>
+                      updateCompressor({ capex_of_target_compressor: event.target.value })
+                    }
+                    suffix="INR"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="gap-4 overflow-hidden py-4 sm:gap-6 sm:py-6">
+          <CardHeader className="grid-rows-[auto] gap-0 px-4 sm:px-6">
+            <CardTitle>Operating Inputs</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6">
+            <FieldGroup className="gap-5 sm:gap-6">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Load Factor</FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={compressor.compressor_load_factor}
+                    onChange={(event) =>
+                      updateCompressor({ compressor_load_factor: event.target.value })
+                    }
+                    suffix="%"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Operating Hours/Year</FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    value={compressor.compressor_operating_hours_year}
+                    onChange={(event) =>
+                      updateCompressor({ compressor_operating_hours_year: event.target.value })
+                    }
+                    suffix="hr/year"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Electricity Tariff</FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={compressor.compressor_electricity_tariff}
+                    onChange={(event) =>
+                      updateCompressor({ compressor_electricity_tariff: event.target.value })
+                    }
+                    suffix="INR/kWh"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm leading-snug">Grid Emission Factor</FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={compressor.compressor_grid_emission_factor}
+                    onChange={(event) =>
+                      updateCompressor({ compressor_grid_emission_factor: event.target.value })
+                    }
+                    suffix="kgCO2/kWh"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+
+                <Field className="sm:col-span-2 xl:col-span-2">
+                  <FieldLabel className="text-sm leading-snug">Energy Consumption</FieldLabel>
+                  <InputWithSuffix
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={compressor.compressor_energy_consumption}
+                    onChange={(event) =>
+                      updateCompressor({ compressor_energy_consumption: event.target.value })
+                    }
+                    suffix="kWh/year"
+                    suffixClassName={mixedCaseSuffixClassName}
+                  />
+                </Field>
+              </div>
+            </FieldGroup>
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:justify-between">
+          <Button type="button" variant="outline" onClick={onBack} className="w-full sm:w-auto">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Change Equipment
+          </Button>
+          <Button type="submit" disabled={!isFormValid} className="w-full gap-2 sm:w-auto">
+            Generate Recommendations
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </form>
+    </motion.div>
   )
 }

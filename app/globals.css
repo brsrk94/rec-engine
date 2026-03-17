@@ -131,10 +131,17 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   h1, h2, h3, h4, h5, h6 {
     font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
+  img,
+  svg,
+  canvas,
+  video {
+    max-width: 100%;
+    height: auto;
   }
 }
 
