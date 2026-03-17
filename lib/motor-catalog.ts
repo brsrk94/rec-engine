@@ -208,6 +208,123 @@ function getLegendLabel(candidate: MotorCatalogItem, index: number) {
   return `#${index + 1} ${candidate.make} - ${candidate.model}`
 }
 
+function normalizeMotorMake(make: string | null | undefined) {
+  return make?.trim().toLowerCase() ?? ''
+}
+
+function getRecommendationCandidateKey(entry: MotorRecommendationCandidate) {
+  return [
+    normalizeMotorMake(entry.candidate.make),
+    entry.candidate.model.trim().toLowerCase(),
+    entry.candidate.efficiency_class,
+    entry.candidate.rated_power_kw.toFixed(4),
+  ].join('::')
+}
+
+function compareRecommendationCandidates(
+  left: MotorRecommendationCandidate,
+  right: MotorRecommendationCandidate
+) {
+  const leftMac = left.metrics.marginalAbatementCost
+  const rightMac = right.metrics.marginalAbatementCost
+
+  if (leftMac !== rightMac) {
+    return leftMac - rightMac
+  }
+
+  if (left.exactRating !== right.exactRating) {
+    return left.exactRating ? -1 : 1
+  }
+
+  if (left.metrics.paybackYears !== right.metrics.paybackYears) {
+    return left.metrics.paybackYears - right.metrics.paybackYears
+  }
+
+  if (left.ratingDifferenceKw !== right.ratingDifferenceKw) {
+    return left.ratingDifferenceKw - right.ratingDifferenceKw
+  }
+
+  if (left.targetEfficiency !== right.targetEfficiency) {
+    return right.targetEfficiency - left.targetEfficiency
+  }
+
+  return left.candidate.model.localeCompare(right.candidate.model)
+}
+
+function selectDiversifiedRecommendationCandidates(
+  scoredCandidates: MotorRecommendationCandidate[],
+  limit: number,
+  currentMake?: string
+) {
+  const sortedCandidates = [...scoredCandidates].sort(compareRecommendationCandidates)
+
+  if (limit <= 1 || sortedCandidates.length <= 1) {
+    return sortedCandidates.slice(0, limit)
+  }
+
+  const normalizedCurrentMake = normalizeMotorMake(currentMake)
+  const selected: MotorRecommendationCandidate[] = []
+  const usedKeys = new Set<string>()
+  const usedMakes = new Set<string>()
+
+  const pickCandidate = (entry?: MotorRecommendationCandidate) => {
+    if (!entry) {
+      return false
+    }
+
+    const key = getRecommendationCandidateKey(entry)
+
+    if (usedKeys.has(key)) {
+      return false
+    }
+
+    selected.push(entry)
+    usedKeys.add(key)
+    usedMakes.add(normalizeMotorMake(entry.candidate.make))
+    return true
+  }
+
+  pickCandidate(sortedCandidates[0])
+
+  if (normalizedCurrentMake) {
+    pickCandidate(
+      sortedCandidates.find(
+        (entry) => normalizeMotorMake(entry.candidate.make) === normalizedCurrentMake
+      )
+    )
+
+    pickCandidate(
+      sortedCandidates.find(
+        (entry) => normalizeMotorMake(entry.candidate.make) !== normalizedCurrentMake
+      )
+    )
+  }
+
+  for (const entry of sortedCandidates) {
+    if (selected.length >= limit) {
+      break
+    }
+
+    const make = normalizeMotorMake(entry.candidate.make)
+
+    if (usedMakes.has(make)) {
+      continue
+    }
+
+    pickCandidate(entry)
+  }
+
+  for (const entry of sortedCandidates) {
+    if (selected.length >= limit) {
+      break
+    }
+
+    pickCandidate(entry)
+  }
+
+  return [...selected].sort(compareRecommendationCandidates).slice(0, limit)
+}
+
 export function getMotorClassBenchmark(efficiencyClass: string) {
   return MOTOR_CLASS_BENCHMARKS[efficiencyClass as keyof typeof MOTOR_CLASS_BENCHMARKS] ?? null
 }
@@ -437,6 +554,7 @@ export function findRecommendedTargetMotors(
   currentMotor?: MotorCatalogItem | null
 ) {
   const referenceMotor = currentMotor ?? assessment?.selected_catalog_motor ?? null
+  const currentMake = preferredMake || referenceMotor?.make || ''
   const candidates = getComparableTargetMotors(
     motors,
     targetClass,
@@ -503,42 +621,16 @@ export function findRecommendedTargetMotors(
     } satisfies MotorRecommendationCandidate
   })
 
-  return scoredCandidates
-    .filter(
-      (entry) =>
-        entry.metrics.annualEnergySavingsKwh > 0 &&
-        entry.metrics.annualEnergyCostSavingsInr > 0 &&
-        entry.metrics.annualEmissionsSavingsKg > 0 &&
-        Number.isFinite(entry.metrics.paybackYears) &&
-        Number.isFinite(entry.metrics.marginalAbatementCost)
-    )
-    .sort((left, right) => {
-      const leftMac = left.metrics.marginalAbatementCost
-      const rightMac = right.metrics.marginalAbatementCost
+  const viableCandidates = scoredCandidates.filter(
+    (entry) =>
+      entry.metrics.annualEnergySavingsKwh > 0 &&
+      entry.metrics.annualEnergyCostSavingsInr > 0 &&
+      entry.metrics.annualEmissionsSavingsKg > 0 &&
+      Number.isFinite(entry.metrics.paybackYears) &&
+      Number.isFinite(entry.metrics.marginalAbatementCost)
+  )
 
-      if (leftMac !== rightMac) {
-        return leftMac - rightMac
-      }
-
-      if (left.exactRating !== right.exactRating) {
-        return left.exactRating ? -1 : 1
-      }
-
-      if (left.metrics.paybackYears !== right.metrics.paybackYears) {
-        return left.metrics.paybackYears - right.metrics.paybackYears
-      }
-
-      if (left.ratingDifferenceKw !== right.ratingDifferenceKw) {
-        return left.ratingDifferenceKw - right.ratingDifferenceKw
-      }
-
-      if (left.targetEfficiency !== right.targetEfficiency) {
-        return right.targetEfficiency - left.targetEfficiency
-      }
-
-      return left.candidate.model.localeCompare(right.candidate.model)
-    })
-    .slice(0, limit)
+  return selectDiversifiedRecommendationCandidates(viableCandidates, limit, currentMake)
 }
 
 export function findRecommendedTargetMotor(

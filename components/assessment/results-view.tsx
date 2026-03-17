@@ -28,6 +28,7 @@ import {
   ASSESSMENT_EQUIPMENT_ASSETS,
   type AssessmentEquipmentId,
 } from './equipment-image'
+import { MotorRecommendationCharts } from './motor-recommendation-charts'
 
 const equipmentConfig = {
   motor: {
@@ -476,6 +477,12 @@ export function ResultsView() {
 
         {/* Recommendations */}
         <div ref={cardsRef} className="space-y-6">
+          {motorResults ? (
+            <MotorRecommendationCharts
+              currentSystem={motorResults.currentSystem}
+              recommendations={motorResults.recommendations}
+            />
+          ) : null}
 
           {/* Current System */}
           <Card>
