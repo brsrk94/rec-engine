@@ -1,0 +1,228 @@
+"use client"
+
+import { useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { gsap } from 'gsap'
+import { ArrowLeft, ArrowRight, Info } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
+import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
+import { animateAssessmentScreen } from './animations'
+import { AssessmentEquipmentImage } from './equipment-image'
+
+const fanTypes = [
+  { value: 'conventional_ac', label: 'Conventional AC Motor Fan (70-80W)' },
+  { value: 'capacitor_run', label: 'Capacitor Run Fan (50-60W)' },
+  { value: 'old_ceiling', label: 'Old Ceiling Fan (>80W)' },
+]
+
+interface BLDCFanFormProps {
+  onBack: () => void
+}
+
+export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
+  const router = useRouter()
+  const { data, updateBLDCFan } = useAssessmentStorage()
+  const formRef = useRef<HTMLDivElement>(null)
+  const fan = data.bldc_fan
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      animateAssessmentScreen(formRef.current)
+    }, formRef)
+
+    return () => ctx.revert()
+  }, [])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    router.push('/assessment/results?type=bldc_fan')
+  }
+
+  const isFormValid = () => {
+    return fan.current_fan_type && fan.number_of_fans && fan.operating_hours_year
+  }
+
+  return (
+    <TooltipProvider>
+      <div ref={formRef}>
+        <div className="mb-8 flex items-start gap-3 sm:items-center sm:gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <AssessmentEquipmentImage equipmentId="bldc_fan" className="h-10 w-10 sm:h-12 sm:w-12" />
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold leading-tight sm:text-2xl">BLDC Fan Assessment</h1>
+              <p className="text-muted-foreground">Evaluate ceiling fan upgrade potential</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Fan Details</CardTitle>
+                <CardDescription>
+                  Information about your existing ceiling fans
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel className="flex items-center gap-1">
+                      Current Fan Type *
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The type of motor in your current fans</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </FieldLabel>
+                    <Select
+                      value={fan.current_fan_type}
+                      onValueChange={(value) => updateBLDCFan({ current_fan_type: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select fan type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fanTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Current Wattage per Fan</FieldLabel>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 75"
+                      value={fan.current_wattage}
+                      onChange={(e) => updateBLDCFan({ current_wattage: e.target.value })}
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel className="flex items-center gap-1">
+                      Number of Fans *
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Total number of fans to be upgraded</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </FieldLabel>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="e.g., 50"
+                      value={fan.number_of_fans}
+                      onChange={(e) => updateBLDCFan({ number_of_fans: e.target.value })}
+                      required
+                    />
+                  </Field>
+                </FieldGroup>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Operating Parameters</CardTitle>
+                <CardDescription>
+                  Usage patterns and cost parameters
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel className="flex items-center gap-1">
+                      Operating Hours per Year *
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Average annual operating hours per fan</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </FieldLabel>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 3000"
+                      value={fan.operating_hours_year}
+                      onChange={(e) => updateBLDCFan({ operating_hours_year: e.target.value })}
+                      required
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Electricity Tariff (INR/kWh)</FieldLabel>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={fan.electricity_tariff}
+                      onChange={(e) => updateBLDCFan({ electricity_tariff: e.target.value })}
+                    />
+                  </Field>
+                </FieldGroup>
+              </CardContent>
+            </Card>
+
+            {/* BLDC Info Card */}
+            <Card className="border-primary/30 bg-primary/5 lg:col-span-2">
+              <CardContent className="flex items-start gap-4 pt-6">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                  <Info className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">BLDC Fan Benefits</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    BLDC (Brushless DC) ceiling fans consume only 28-35W compared to 70-80W for conventional fans, 
+                    offering up to 65% energy savings. They also feature longer lifespan, quieter operation, 
+                    and often come with remote controls and speed regulation.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-between">
+            <Button type="button" variant="outline" onClick={onBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Change Equipment
+            </Button>
+            <Button type="submit" disabled={!isFormValid()} className="sm:min-w-[200px]">
+              Get Recommendations
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </form>
+      </div>
+    </TooltipProvider>
+  )
+}
