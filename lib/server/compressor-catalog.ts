@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import {
+  getCompressorCatalogKey,
   mapCatalogCompressorType,
   type CompressorCatalogItem,
   type CompressorCatalogPayload,
@@ -59,14 +60,7 @@ export async function getCompressorCatalogPayload() {
     })
     .filter((item) => item.make && item.model && Number.isFinite(item.rated_power_kw))
     .reduce((uniqueCompressors, compressor) => {
-      const catalogKey = [
-        compressor.make,
-        compressor.model,
-        compressor.benchmark_type,
-        compressor.rated_power_kw.toFixed(4),
-        compressor.pressure_bar?.toFixed(4) ?? '',
-        compressor.series ?? '',
-      ].join('::')
+      const catalogKey = getCompressorCatalogKey(compressor)
 
       if (!uniqueCompressors.has(catalogKey)) {
         uniqueCompressors.set(catalogKey, compressor)

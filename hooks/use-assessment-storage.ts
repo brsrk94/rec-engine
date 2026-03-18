@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import type { BLDCFanCatalogItem } from '@/lib/bldc-fan-catalog'
 import type { MotorCatalogItem } from '@/lib/motor-catalog'
 
 export interface MotorAssessment {
@@ -31,6 +32,9 @@ export interface CompressorAssessment {
   current_compressor_type: string
   years_of_operation_current_compressor: string
   target_compressor_type: string
+  target_compressor_make: string
+  target_compressor_model: string
+  target_compressor_catalog_key: string
   target_compressor_rating: string
   target_compressor_rating_unit: 'kW' | 'HP'
   lifetime_of_target_compressor: string
@@ -44,11 +48,29 @@ export interface CompressorAssessment {
 }
 
 export interface BLDCFanAssessment {
-  current_fan_type: string
-  number_of_fans: string
-  operating_hours_year: string
+  conventional_fan_catalog_key: string
+  conventional_fan_make: string
+  conventional_fan_make_model: string
+  conventional_fan_power_rating_w: string
+  room_size: 'small' | 'medium' | 'large'
+  daily_runtime_hours: string
+  working_days_per_year: string
   electricity_tariff: string
-  current_wattage: string
+  grid_emission_factor: string
+  bldc_fan_catalog_key: string
+  bldc_fan_make: string
+  bldc_fan_model: string
+  bldc_fan_power_rating_w: string
+  bldc_fan_sweep_mm: string
+  number_of_fans_to_switch: string
+  capex_bldc_fan_inr_per_fan: string
+  bldc_installation_cost_inr_per_fan: string
+  conventional_installation_cost_inr_per_fan: string
+  current_years_of_operation: string
+  discount_factor_percent: string
+  bldc_lifetime_years: string
+  selected_conventional_catalog_fan: BLDCFanCatalogItem | null
+  selected_catalog_fan: BLDCFanCatalogItem | null
 }
 
 export interface AirConditionerAssessment {
@@ -123,6 +145,9 @@ const initialCompressorAssessment: CompressorAssessment = {
   current_compressor_type: '',
   years_of_operation_current_compressor: '',
   target_compressor_type: '',
+  target_compressor_make: '',
+  target_compressor_model: '',
+  target_compressor_catalog_key: '',
   target_compressor_rating: '',
   target_compressor_rating_unit: 'kW',
   lifetime_of_target_compressor: '10',
@@ -136,11 +161,29 @@ const initialCompressorAssessment: CompressorAssessment = {
 }
 
 const initialBLDCFanAssessment: BLDCFanAssessment = {
-  current_fan_type: '',
-  number_of_fans: '1',
-  operating_hours_year: '',
+  conventional_fan_catalog_key: '',
+  conventional_fan_make: '',
+  conventional_fan_make_model: '',
+  conventional_fan_power_rating_w: '75',
+  room_size: 'large',
+  daily_runtime_hours: '',
+  working_days_per_year: '',
   electricity_tariff: '8',
-  current_wattage: '75',
+  grid_emission_factor: '0.716',
+  bldc_fan_catalog_key: '',
+  bldc_fan_make: '',
+  bldc_fan_model: '',
+  bldc_fan_power_rating_w: '',
+  bldc_fan_sweep_mm: '',
+  number_of_fans_to_switch: '1',
+  capex_bldc_fan_inr_per_fan: '4500',
+  bldc_installation_cost_inr_per_fan: '3000',
+  conventional_installation_cost_inr_per_fan: '2000',
+  current_years_of_operation: '',
+  discount_factor_percent: '8',
+  bldc_lifetime_years: '10',
+  selected_conventional_catalog_fan: null,
+  selected_catalog_fan: null,
 }
 
 const initialAirConditionerAssessment: AirConditionerAssessment = {
@@ -188,7 +231,21 @@ function readAssessmentDraft() {
       return initialAssessmentState
     }
 
-    return { ...initialAssessmentState, ...JSON.parse(storedDraft) } as AssessmentData
+    const parsedDraft = JSON.parse(storedDraft) as Partial<AssessmentData>
+
+    return {
+      ...initialAssessmentState,
+      ...parsedDraft,
+      motor: { ...initialMotorAssessment, ...(parsedDraft.motor ?? {}) },
+      compressor: { ...initialCompressorAssessment, ...(parsedDraft.compressor ?? {}) },
+      bldc_fan: { ...initialBLDCFanAssessment, ...(parsedDraft.bldc_fan ?? {}) },
+      air_conditioner: {
+        ...initialAirConditionerAssessment,
+        ...(parsedDraft.air_conditioner ?? {}),
+      },
+      led_retrofit: { ...initialLedRetrofitAssessment, ...(parsedDraft.led_retrofit ?? {}) },
+      dg_set: { ...initialDgSetAssessment, ...(parsedDraft.dg_set ?? {}) },
+    } as AssessmentData
   } catch (error) {
     console.warn('Fitsol: unable to read assessment draft from session storage.', error)
     return initialAssessmentState

@@ -28,9 +28,11 @@ import {
   staggerItemVariants,
 } from '@/components/motion/variants'
 import { Button } from '@/components/ui/button'
+import { useBLDCFanCatalog } from '@/hooks/use-bldc-fan-catalog'
 import { useCompressorCatalog } from '@/hooks/use-compressor-catalog'
 import { useAssessmentStorage, type AssessmentData } from '@/hooks/use-assessment-storage'
 import { useMotorCatalog } from '@/hooks/use-motor-catalog'
+import { buildBLDCFanRecommendation } from '@/lib/assessment/bldc-fan-recommendation'
 import { buildCompressorRecommendation } from '@/lib/assessment/compressor-recommendation'
 import {
   assessmentEquipmentMeta,
@@ -76,6 +78,17 @@ const CompressorRecommendationCharts = dynamic(
   }
 )
 
+const BLDCFanRecommendationCharts = dynamic(
+  () =>
+    import('@/components/assessment/bldc-fan-recommendation-charts').then(
+      (module) => module.BLDCFanRecommendationCharts
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  }
+)
+
 function isKnownEquipmentType(value: string): value is AssessmentEquipmentKey {
   return value in assessmentEquipmentMeta
 }
@@ -106,52 +119,7 @@ function buildFallbackResults(equipmentType: string, assessments: AssessmentData
   }
 
   if (equipmentType === 'bldc_fan') {
-    const fanAssessment = assessments.bldc_fan
-    const currentFanWattage = parseFloat(fanAssessment.current_wattage) || 75
-    const fanCount = parseInt(fanAssessment.number_of_fans) || 1
-    const annualRuntimeHours = parseFloat(fanAssessment.operating_hours_year) || 3000
-    const electricityTariff = parseFloat(fanAssessment.electricity_tariff) || 8
-    const targetFanWattage = 28
-
-    const currentAnnualEnergy = (currentFanWattage * fanCount * annualRuntimeHours) / 1000
-    const upgradedAnnualEnergy = (targetFanWattage * fanCount * annualRuntimeHours) / 1000
-    const annualEnergySavings = currentAnnualEnergy - upgradedAnnualEnergy
-    const annualCostSavings = annualEnergySavings * electricityTariff
-    const annualEmissionSavings = annualEnergySavings * 0.71
-    const upgradeCost = 2500 * fanCount
-    const paybackPeriodYears = annualCostSavings > 0 ? upgradeCost / annualCostSavings : 0
-
-    return {
-      currentSystem: {
-        type: 'Conventional AC Fan',
-        rating: `${currentFanWattage}W x ${fanCount} units`,
-        make: 'Various',
-        model: 'Standard Ceiling Fan',
-        annualEnergy: Math.round(currentAnnualEnergy),
-        annualCost: Math.round(currentAnnualEnergy * electricityTariff),
-      },
-      recommendations: [
-        {
-          id: 1,
-          name: 'BLDC Ceiling Fan',
-          make: 'Atomberg / Orient',
-          model: 'Energy Efficient BLDC',
-          badge: '65% Savings',
-          energySavings: Math.round(annualEnergySavings),
-          costSavings: Math.round(annualCostSavings),
-          emissionSavings: Math.round(annualEmissionSavings),
-          upgradeCost: Math.round(upgradeCost),
-          paybackYears: paybackPeriodYears.toFixed(1),
-          efficiency: 90,
-        },
-      ],
-      summary: {
-        totalEnergySavings: Math.round(annualEnergySavings),
-        totalCostSavings: Math.round(annualCostSavings),
-        totalEmissionSavings: Math.round(annualEmissionSavings / 1000),
-        averagePayback: paybackPeriodYears.toFixed(1),
-      },
-    }
+    return buildBLDCFanRecommendation(assessments.bldc_fan)
   }
 
   return {
@@ -213,6 +181,14 @@ export function ResultsView() {
   } = useCompressorCatalog({
     enabled: isLoaded && equipmentType === 'compressor',
   })
+  const {
+    catalog: fanCatalog,
+    errorMessage: fanCatalogError,
+    isLoading: isFanCatalogLoading,
+    reload: reloadFanCatalog,
+  } = useBLDCFanCatalog({
+    enabled: isLoaded && equipmentType === 'bldc_fan',
+  })
 
   const recommendationResult = useMemo(() => {
     if (!isLoaded) {
@@ -235,8 +211,16 @@ export function ResultsView() {
       return buildCompressorRecommendation(data.compressor, compressorCatalog.compressors)
     }
 
+    if (equipmentType === 'bldc_fan') {
+      if (!fanCatalog) {
+        return null
+      }
+
+      return buildBLDCFanRecommendation(data.bldc_fan, fanCatalog.fans)
+    }
+
     return buildFallbackResults(equipmentType, data)
-  }, [compressorCatalog, data, equipmentType, isLoaded, motorCatalog])
+  }, [compressorCatalog, data, equipmentType, fanCatalog, isLoaded, motorCatalog])
 
   if (equipmentType === 'motor' && motorCatalogError) {
     return (
@@ -262,10 +246,23 @@ export function ResultsView() {
     )
   }
 
+  if (equipmentType === 'bldc_fan' && fanCatalogError) {
+    return (
+      <ResultsErrorState
+        title="Unable to load BLDC fan recommendations"
+        description={fanCatalogError}
+        primaryActionLabel="Back to BLDC Fan Assessment"
+        onPrimaryAction={() => router.push('/assessment?type=bldc_fan')}
+        onRetry={reloadFanCatalog}
+      />
+    )
+  }
+
   if (
     !isLoaded ||
     (equipmentType === 'motor' && isMotorCatalogLoading) ||
     (equipmentType === 'compressor' && isCompressorCatalogLoading) ||
+    (equipmentType === 'bldc_fan' && isFanCatalogLoading) ||
     !recommendationResult
   ) {
     return <ResultsLoadingState />
@@ -273,6 +270,9 @@ export function ResultsView() {
 
   const motorResults =
     equipmentType === 'motor' ? (recommendationResult as MotorRecommendationResult) : null
+  const isCompressorResults = equipmentType === 'compressor'
+  const isBLDCFanResults = equipmentType === 'bldc_fan'
+  const usesFocusedResultsFlow = isCompressorResults || isBLDCFanResults
 
   const startFreshAssessment = () => {
     clearAll()
@@ -326,11 +326,13 @@ export function ResultsView() {
           </div>
         </motion.div>
 
-        <motion.div className="mb-8" variants={fadeUpVariants}>
-          <ResultsSummaryGrid summary={recommendationResult.summary} />
-        </motion.div>
-
         <motion.div className="space-y-6" variants={staggerContainerVariants}>
+          {!usesFocusedResultsFlow ? (
+            <motion.div variants={staggerItemVariants}>
+              <ResultsSummaryGrid summary={recommendationResult.summary} />
+            </motion.div>
+          ) : null}
+
           {motorResults ? (
             <motion.div variants={staggerItemVariants}>
               <MotorRecommendationCharts
@@ -340,18 +342,15 @@ export function ResultsView() {
             </motion.div>
           ) : null}
 
-          {equipmentType === 'compressor' ? (
-            <motion.div variants={staggerItemVariants}>
-              <CompressorRecommendationCharts
-                currentSystem={recommendationResult.currentSystem}
-                recommendations={recommendationResult.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
           <motion.div variants={staggerItemVariants}>
             <CurrentSystemCard currentSystem={recommendationResult.currentSystem} />
           </motion.div>
+
+          {usesFocusedResultsFlow ? (
+            <motion.div variants={staggerItemVariants}>
+              <ResultsSummaryGrid summary={recommendationResult.summary} />
+            </motion.div>
+          ) : null}
 
           <motion.section aria-labelledby="recommended-upgrades-heading" variants={staggerItemVariants}>
             <h2 id="recommended-upgrades-heading" className="mb-4 text-xl font-semibold">
@@ -372,11 +371,30 @@ export function ResultsView() {
                     motorComparison={motorComparison}
                     formatMetricValue={formatPositiveMetric}
                     hideFinancialSidebar={equipmentType === 'compressor'}
+                    equipmentType={equipmentType}
                   />
                 )
               })}
             </div>
           </motion.section>
+
+          {isCompressorResults ? (
+            <motion.div variants={staggerItemVariants}>
+              <CompressorRecommendationCharts
+                currentSystem={recommendationResult.currentSystem}
+                recommendations={recommendationResult.recommendations}
+              />
+            </motion.div>
+          ) : null}
+
+          {isBLDCFanResults ? (
+            <motion.div variants={staggerItemVariants}>
+              <BLDCFanRecommendationCharts
+                currentSystem={recommendationResult.currentSystem}
+                recommendations={recommendationResult.recommendations}
+              />
+            </motion.div>
+          ) : null}
 
           <motion.div
             className="flex flex-col gap-4 pt-6 sm:flex-row sm:justify-start"

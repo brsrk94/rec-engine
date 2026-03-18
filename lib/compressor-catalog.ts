@@ -24,6 +24,17 @@ export interface CompressorCatalogPayload {
   compressors: CompressorCatalogItem[]
 }
 
+export function getCompressorCatalogKey(compressor: CompressorCatalogItem) {
+  return [
+    compressor.make,
+    compressor.model,
+    compressor.benchmark_type,
+    compressor.rated_power_kw.toFixed(4),
+    compressor.pressure_bar?.toFixed(4) ?? '',
+    compressor.series ?? '',
+  ].join('::')
+}
+
 interface CatalogCompressorTypeInput {
   rawType?: string | null
   model?: string | null

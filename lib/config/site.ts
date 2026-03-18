@@ -1,11 +1,12 @@
+type SiteLink = {
+  href: string
+  label: string
+}
+
 export const siteConfig = {
   name: 'Fitsol',
   brandColor: '#065F46',
-  navigationLinks: [
-    { href: '#features', label: 'Features' },
-    { href: '#equipment', label: 'Equipment' },
-    { href: '#how-it-works', label: 'How It Works' },
-  ],
+  navigationLinks: [] as SiteLink[],
 } as const
 
 export const footerEquipmentLinks = [

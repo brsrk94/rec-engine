@@ -111,9 +111,10 @@ export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
             variants={staggerItemVariants}
             whileHover={prefersReducedMotion ? undefined : { y: -2 }}
             transition={smoothTransition}
+            className="h-full"
           >
             <Card
-              className="group cursor-pointer border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:border-primary/35"
+              className="group flex h-full cursor-pointer flex-col border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:border-primary/35"
               onClick={() => onSelect(option.id)}
             >
               <CardHeader className="gap-4 pb-3">
@@ -134,7 +135,7 @@ export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
                   </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 <CardDescription>{option.description}</CardDescription>
               </CardContent>
             </Card>

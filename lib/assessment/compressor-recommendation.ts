@@ -33,6 +33,29 @@ interface CompressorRecommendationCandidate {
   metrics: CompressorUpgradeMetrics
 }
 
+function shortlistCompressorCandidates(
+  rankedCandidates: CompressorRecommendationCandidate[],
+  limit = 3
+) {
+  return rankedCandidates.reduce<CompressorRecommendationCandidate[]>((shortlist, entry) => {
+    if (shortlist.length >= limit) {
+      return shortlist
+    }
+
+    const isDuplicateModel = shortlist.some(
+      (savedEntry) =>
+        savedEntry.candidate.make === entry.candidate.make &&
+        savedEntry.candidate.model === entry.candidate.model
+    )
+
+    if (!isDuplicateModel) {
+      shortlist.push(entry)
+    }
+
+    return shortlist
+  }, [])
+}
+
 function parsePositiveNumber(value: string) {
   const parsed = parseFloat(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
@@ -84,6 +107,12 @@ function buildManualFallbackRecommendation(
   marginalAbatementCost: number
 ) {
   const targetTypeLabel = getCompressorTypeLabel(assessment.target_compressor_type)
+  const targetMake = assessment.target_compressor_make || targetTypeLabel
+  const targetModel =
+    assessment.target_compressor_model ||
+    `${assessment.target_compressor_rating || assessment.compressor_rating || '0'} ${
+      assessment.target_compressor_rating_unit || assessment.compressor_rating_unit
+    }`
 
   return {
     currentSystem: {
@@ -98,10 +127,8 @@ function buildManualFallbackRecommendation(
       {
         id: 1,
         name: `${targetTypeLabel} Upgrade Option 1`,
-        make: targetTypeLabel,
-        model: `${assessment.target_compressor_rating || assessment.compressor_rating || '0'} ${
-          assessment.target_compressor_rating_unit || assessment.compressor_rating_unit
-        }`,
+        make: targetMake,
+        model: targetModel,
         badge: annualEnergySavings >= 0 ? 'Recommended' : 'Review Input',
         energySavings: formatWholeNumber(annualEnergySavings),
         costSavings: formatWholeNumber(annualCostSavings),
@@ -169,124 +196,126 @@ export function buildCompressorRecommendation(
     currentCapex * Math.pow(1 - COMPRESSOR_DISCOUNT_RATE, compressorAge)
   const lifetimeDiscountFactor =
     (1 - Math.pow(1 + COMPRESSOR_DISCOUNT_RATE, -targetLifetime)) / COMPRESSOR_DISCOUNT_RATE
+  const rankPositiveCandidates = (minimumRatingKw: number, referenceRatingKw: number) =>
+    compressors
+      .filter((candidate) => {
+        if (
+          candidate.make === assessment.compressor_make &&
+          candidate.model === assessment.compressor_model
+        ) {
+          return false
+        }
 
-  const availableCandidates = compressors.filter((candidate) => {
-    if (candidate.make === assessment.compressor_make && candidate.model === assessment.compressor_model) {
-      return false
-    }
+        if (!Number.isFinite(candidate.rated_power_kw) || candidate.rated_power_kw <= 0) {
+          return false
+        }
 
-    if (!Number.isFinite(candidate.rated_power_kw) || candidate.rated_power_kw <= 0) {
-      return false
-    }
+        if (minimumRatingKw > 0 && candidate.rated_power_kw < minimumRatingKw * 0.95) {
+          return false
+        }
 
-    if (minimumRequiredRatingKw > 0 && candidate.rated_power_kw < minimumRequiredRatingKw * 0.95) {
-      return false
-    }
+        return true
+      })
+      .map((candidate) => {
+        const targetEfficiency = getCompressorTargetEfficiency(candidate.benchmark_type)
+        const targetAnnualEnergy =
+          candidate.rated_power_kw && targetEfficiency
+            ? (candidate.rated_power_kw * loadFactor * operatingHours) / targetEfficiency
+            : 0
+        const annualEnergySavings = baselineAnnualEnergy - targetAnnualEnergy
+        const annualCostSavings = annualEnergySavings * electricityTariff
+        const annualEmissionSavings = annualEnergySavings * gridEmissionFactor
+        const targetCapex = getDefaultCompressorCapex(
+          candidate.benchmark_type,
+          candidate.rated_power_kw,
+          'kW'
+        )
+        const incrementalUpgradeCost = targetCapex - presentValueOfCurrentCompressor
+        const npvEnergySavings = annualCostSavings * lifetimeDiscountFactor
+        const npvEmissionReduction = annualEmissionSavings * lifetimeDiscountFactor
+        const paybackYears = calculatePaybackYears(incrementalUpgradeCost, annualCostSavings)
+        const marginalAbatementCost =
+          npvEmissionReduction > 0
+            ? (incrementalUpgradeCost - npvEnergySavings) / npvEmissionReduction
+            : Number.NaN
 
-    return true
-  })
-
-  const rankedPositiveCandidates = availableCandidates
-    .map((candidate) => {
-      const targetEfficiency = getCompressorTargetEfficiency(candidate.benchmark_type)
-      const targetAnnualEnergy =
-        candidate.rated_power_kw && targetEfficiency
-          ? (candidate.rated_power_kw * loadFactor * operatingHours) / targetEfficiency
-          : 0
-      const annualEnergySavings = baselineAnnualEnergy - targetAnnualEnergy
-      const annualCostSavings = annualEnergySavings * electricityTariff
-      const annualEmissionSavings = annualEnergySavings * gridEmissionFactor
-      const targetCapex = getDefaultCompressorCapex(
-        candidate.benchmark_type,
-        candidate.rated_power_kw,
-        'kW'
+        return {
+          candidate,
+          targetEfficiency,
+          ratingDifferenceKw: Math.abs(candidate.rated_power_kw - referenceRatingKw),
+          exactRating: Math.abs(candidate.rated_power_kw - referenceRatingKw) < 0.001,
+          matchesRequestedTargetType: candidate.benchmark_type === assessment.target_compressor_type,
+          sameMake: candidate.make === assessment.compressor_make,
+          metrics: {
+            targetAnnualEnergy,
+            annualEnergySavings,
+            annualCostSavings,
+            annualEmissionSavings,
+            targetCapex,
+            incrementalUpgradeCost,
+            npvEnergySavings,
+            npvEmissionReduction,
+            paybackYears,
+            marginalAbatementCost,
+          },
+        }
+      })
+      .filter(
+        (entry) =>
+          entry.metrics.annualEnergySavings > 0 &&
+          entry.metrics.annualCostSavings > 0 &&
+          entry.metrics.annualEmissionSavings > 0
       )
-      const incrementalUpgradeCost = targetCapex - presentValueOfCurrentCompressor
-      const npvEnergySavings = annualCostSavings * lifetimeDiscountFactor
-      const npvEmissionReduction = annualEmissionSavings * lifetimeDiscountFactor
-      const paybackYears = calculatePaybackYears(incrementalUpgradeCost, annualCostSavings)
-      const marginalAbatementCost =
-        npvEmissionReduction > 0
-          ? (incrementalUpgradeCost - npvEnergySavings) / npvEmissionReduction
-          : Number.NaN
+      .sort((left, right) => {
+        const leftMac = Number.isFinite(left.metrics.marginalAbatementCost)
+          ? left.metrics.marginalAbatementCost
+          : Number.POSITIVE_INFINITY
+        const rightMac = Number.isFinite(right.metrics.marginalAbatementCost)
+          ? right.metrics.marginalAbatementCost
+          : Number.POSITIVE_INFINITY
 
-      return {
-        candidate,
-        targetEfficiency,
-        ratingDifferenceKw: Math.abs(candidate.rated_power_kw - desiredTargetRatingKw),
-        exactRating: Math.abs(candidate.rated_power_kw - desiredTargetRatingKw) < 0.001,
-        matchesRequestedTargetType: candidate.benchmark_type === assessment.target_compressor_type,
-        sameMake: candidate.make === assessment.compressor_make,
-        metrics: {
-          targetAnnualEnergy,
-          annualEnergySavings,
-          annualCostSavings,
-          annualEmissionSavings,
-          targetCapex,
-          incrementalUpgradeCost,
-          npvEnergySavings,
-          npvEmissionReduction,
-          paybackYears,
-          marginalAbatementCost,
-        },
-      }
-    })
-    .filter(
-      (entry) =>
-        entry.metrics.annualEnergySavings > 0 &&
-        entry.metrics.annualCostSavings > 0 &&
-        entry.metrics.annualEmissionSavings > 0
+        if (leftMac !== rightMac) {
+          return leftMac - rightMac
+        }
+
+        if (left.matchesRequestedTargetType !== right.matchesRequestedTargetType) {
+          return left.matchesRequestedTargetType ? -1 : 1
+        }
+
+        if (left.ratingDifferenceKw !== right.ratingDifferenceKw) {
+          return left.ratingDifferenceKw - right.ratingDifferenceKw
+        }
+
+        if (left.exactRating !== right.exactRating) {
+          return left.exactRating ? -1 : 1
+        }
+
+        if (left.sameMake !== right.sameMake) {
+          return left.sameMake ? -1 : 1
+        }
+
+        return left.candidate.model.localeCompare(right.candidate.model)
+      })
+
+  const ratingSearchPlan = Array.from(
+    new Set(
+      [minimumRequiredRatingKw, currentRatingKw, 0]
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .map((value) => Number(value.toFixed(4)))
     )
-    .sort((left, right) => {
-      const leftMac = Number.isFinite(left.metrics.marginalAbatementCost)
-        ? left.metrics.marginalAbatementCost
-        : Number.POSITIVE_INFINITY
-      const rightMac = Number.isFinite(right.metrics.marginalAbatementCost)
-        ? right.metrics.marginalAbatementCost
-        : Number.POSITIVE_INFINITY
+  )
 
-      if (leftMac !== rightMac) {
-        return leftMac - rightMac
-      }
+  let shortlistedCandidates: CompressorRecommendationCandidate[] = []
 
-      if (left.matchesRequestedTargetType !== right.matchesRequestedTargetType) {
-        return left.matchesRequestedTargetType ? -1 : 1
-      }
+  for (const ratingFloorKw of ratingSearchPlan) {
+    const referenceRatingKw = ratingFloorKw > 0 ? ratingFloorKw : currentRatingKw || desiredTargetRatingKw
+    const rankedPositiveCandidates = rankPositiveCandidates(ratingFloorKw, referenceRatingKw)
+    shortlistedCandidates = shortlistCompressorCandidates(rankedPositiveCandidates)
 
-      if (left.ratingDifferenceKw !== right.ratingDifferenceKw) {
-        return left.ratingDifferenceKw - right.ratingDifferenceKw
-      }
-
-      if (left.exactRating !== right.exactRating) {
-        return left.exactRating ? -1 : 1
-      }
-
-      if (left.sameMake !== right.sameMake) {
-        return left.sameMake ? -1 : 1
-      }
-
-      return left.candidate.model.localeCompare(right.candidate.model)
-    })
-
-  const shortlistedCandidates = rankedPositiveCandidates.reduce<
-    CompressorRecommendationCandidate[]
-  >((shortlist, entry) => {
-    if (shortlist.length >= 3) {
-      return shortlist
+    if (shortlistedCandidates.length > 0) {
+      break
     }
-
-    const isDuplicateModel = shortlist.some(
-      (savedEntry) =>
-        savedEntry.candidate.make === entry.candidate.make &&
-        savedEntry.candidate.model === entry.candidate.model
-    )
-
-    if (!isDuplicateModel) {
-      shortlist.push(entry)
-    }
-
-    return shortlist
-  }, [])
+  }
 
   if (shortlistedCandidates.length === 0) {
     const targetAnnualEnergy =

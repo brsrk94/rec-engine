@@ -1,11 +1,13 @@
 'use client'
 
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Info } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatIndianNumber } from '@/lib/formatting'
+import { cn } from '@/lib/utils'
 
 import type {
   AssessmentRecommendationCardSnapshot,
@@ -17,6 +19,14 @@ interface RecommendationCardProps {
   motorComparison?: MotorComparisonSnapshot
   formatMetricValue: (value: number) => string
   hideFinancialSidebar?: boolean
+  equipmentType?: string
+}
+
+interface MetricValueProps {
+  value: string
+  accentClassName: string
+  prefix?: string
+  suffix?: string
 }
 
 const comparisonPanels = [
@@ -53,12 +63,75 @@ function formatComparisonValue(value: number, unit: string, formatter: (value: n
   return unit === 'INR' ? `INR ${formatter(value)}` : `${formatter(value)} ${unit}`
 }
 
+function MetricValue({ value, accentClassName, prefix, suffix }: MetricValueProps) {
+  return (
+    <p className={`text-lg font-semibold ${accentClassName}`}>
+      {prefix ? <span className="mr-1 text-xs font-medium text-muted-foreground">{prefix}</span> : null}
+      <span>{value}</span>
+      {suffix ? <span className="ml-1 text-xs font-medium text-muted-foreground">{suffix}</span> : null}
+    </p>
+  )
+}
+
+function getEstimatedInvestmentTooltip(equipmentType?: string) {
+  switch (equipmentType) {
+    case 'motor':
+      return 'Calculated as the target motor capex minus the discounted value of the current motor, then scaled by motor rating and quantity.'
+    case 'compressor':
+      return 'Calculated as the target compressor capex minus the discounted value of the current compressor.'
+    case 'bldc_fan':
+      return 'For BLDC fans, this is the BLDC fan capex per fan multiplied by the number of fans being replaced. Installation costs are used in MAC, not here.'
+    default:
+      return 'This is the capital investment value used for the recommendation.'
+  }
+}
+
+function getMarginalAbatementCostTooltip() {
+  return 'Marginal Abatement Cost shows the net cost to avoid 1 kgCO2e over the upgrade lifetime. Lower is better, and a negative value means the upgrade saves money while reducing emissions.'
+}
+
+function MetricLabelWithTooltip({
+  label,
+  tooltip,
+  className,
+}: {
+  label: string
+  tooltip?: string
+  className?: string
+}) {
+  return (
+    <div className={cn('flex items-center gap-1.5', className)}>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={`${label} info`}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs text-left leading-relaxed" sideOffset={6}>
+            {tooltip}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+    </div>
+  )
+}
+
 export function RecommendationCard({
   recommendation,
   motorComparison,
   formatMetricValue,
   hideFinancialSidebar = false,
+  equipmentType,
 }: RecommendationCardProps) {
+  const estimatedInvestmentTooltip = getEstimatedInvestmentTooltip(equipmentType)
+  const marginalAbatementCostTooltip = getMarginalAbatementCostTooltip()
+
   return (
     <Card className="overflow-hidden border-primary/30">
       <div className="flex flex-col lg:flex-row">
@@ -87,25 +160,35 @@ export function RecommendationCard({
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
             <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
               <p className="text-sm text-muted-foreground">Energy Savings</p>
-              <p className="text-lg font-semibold text-primary">
-                {formatMetricValue(recommendation.energySavings)} kWh/yr
-              </p>
+              <MetricValue
+                value={formatMetricValue(recommendation.energySavings)}
+                accentClassName="text-primary"
+                suffix="kWh/yr"
+              />
             </div>
             <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
-              <p className="text-sm text-muted-foreground">Cost Savings</p>
-              <p className="text-lg font-semibold text-green-600">
-                INR {formatMetricValue(recommendation.costSavings)}/yr
-              </p>
+              <p className="text-sm text-muted-foreground">Energy Cost Savings</p>
+              <MetricValue
+                value={formatMetricValue(recommendation.costSavings)}
+                accentClassName="text-green-600"
+                prefix="INR"
+                suffix="/yr"
+              />
             </div>
             <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
               <p className="text-sm text-muted-foreground">CO2 Reduction</p>
-              <p className="text-lg font-semibold text-emerald-600">
-                {formatMetricValue(recommendation.emissionSavings)} kg/yr
-              </p>
+              <MetricValue
+                value={formatMetricValue(recommendation.emissionSavings)}
+                accentClassName="text-emerald-600"
+                suffix="kgCO2e/year"
+              />
             </div>
             {motorComparison ? (
               <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
-                <p className="text-sm text-muted-foreground">Marginal Abatement Cost</p>
+                <MetricLabelWithTooltip
+                  label="Marginal Abatement Cost"
+                  tooltip={marginalAbatementCostTooltip}
+                />
                 <p className="text-lg font-semibold text-emerald-700">
                   {recommendation.marginalAbatementCost ?? 'N/A'}
                 </p>
@@ -113,7 +196,10 @@ export function RecommendationCard({
               </div>
             ) : recommendation.marginalAbatementCost ? (
               <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
-                <p className="text-sm text-muted-foreground">Marginal Abatement Cost</p>
+                <MetricLabelWithTooltip
+                  label="Marginal Abatement Cost"
+                  tooltip={marginalAbatementCostTooltip}
+                />
                 <p className="text-lg font-semibold text-emerald-700">
                   {recommendation.marginalAbatementCost}
                 </p>
@@ -176,7 +262,11 @@ export function RecommendationCard({
         {!hideFinancialSidebar ? (
           <div className="flex flex-col justify-center gap-4 border-t bg-secondary/30 p-4 sm:p-6 lg:w-64 lg:border-l lg:border-t-0">
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">Estimated Investment</p>
+              <MetricLabelWithTooltip
+                label="Estimated Investment"
+                tooltip={estimatedInvestmentTooltip}
+                className="justify-center"
+              />
               <p className="text-xl font-bold sm:text-2xl">
                 INR {formatIndianNumber(recommendation.upgradeCost)}
               </p>

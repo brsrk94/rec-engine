@@ -8,9 +8,9 @@ import {
   Legend,
   LinearScale,
   Tooltip,
-  type Plugin,
   type ChartData,
   type ChartOptions,
+  type Plugin,
 } from 'chart.js'
 import { ArrowRight } from 'lucide-react'
 import { Bar } from 'react-chartjs-2'
@@ -24,20 +24,24 @@ import { formatIndianNumber } from '@/lib/formatting'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
-interface CompressorRecommendationChartsProps {
+interface BLDCFanRecommendationChartsProps {
   currentSystem: AssessmentCurrentSystemSnapshot
   recommendations: AssessmentRecommendationCardSnapshot[]
 }
 
-const COMPRESSOR_BAR_COLORS = [
+const BLDC_BAR_COLORS = [
   'rgba(71, 85, 105, 0.9)',
   'rgba(244, 184, 205, 0.9)',
   'rgba(173, 216, 255, 0.92)',
   'rgba(187, 247, 208, 0.94)',
 ]
 
-const COMPRESSOR_BORDER_COLORS = ['#334155', '#DD8DB2', '#60A5FA', '#4ADE80']
-const WATERFALL_BAR_COLORS = ['rgba(71, 85, 105, 0.9)', 'rgba(187, 247, 208, 0.96)', 'rgba(173, 216, 255, 0.92)']
+const BLDC_BORDER_COLORS = ['#334155', '#DD8DB2', '#60A5FA', '#4ADE80']
+const WATERFALL_BAR_COLORS = [
+  'rgba(71, 85, 105, 0.9)',
+  'rgba(187, 247, 208, 0.96)',
+  'rgba(173, 216, 255, 0.92)',
+]
 const WATERFALL_BORDER_COLORS = ['#334155', '#16A34A', '#60A5FA']
 
 function formatNumber(value: number) {
@@ -116,7 +120,7 @@ function createValueLabelPlugin(
 }
 
 const waterfallConnectorPlugin: Plugin<'bar'> = {
-  id: 'waterfall-connectors',
+  id: 'bldc-waterfall-connectors',
   afterDatasetsDraw(chart) {
     const meta = chart.getDatasetMeta(0)
     const bars = meta.data
@@ -164,7 +168,7 @@ const waterfallConnectorPlugin: Plugin<'bar'> = {
   },
 }
 
-function CompressorLegendDot({ fill, border }: { fill: string; border: string }) {
+function BLDCLegendDot({ fill, border }: { fill: string; border: string }) {
   return (
     <span
       aria-hidden="true"
@@ -174,34 +178,31 @@ function CompressorLegendDot({ fill, border }: { fill: string; border: string })
   )
 }
 
-function CompressorChartsLegend() {
+function BLDCFanChartsLegend() {
   return (
     <div className="neo-panel rounded-2xl bg-card px-4 py-4 sm:px-5">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <CompressorLegendDot
-            fill={COMPRESSOR_BAR_COLORS[0]}
-            border={COMPRESSOR_BORDER_COLORS[0]}
-          />
+          <BLDCLegendDot fill={BLDC_BAR_COLORS[0]} border={BLDC_BORDER_COLORS[0]} />
           <ArrowRight className="h-4 w-4 shrink-0 text-[#1666C5]" />
           <span className="text-sm font-semibold text-[#1666C5] sm:text-base">
-            current compressor
+            current fan system
           </span>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            {COMPRESSOR_BAR_COLORS.slice(1, 4).map((fill, index) => (
-              <CompressorLegendDot
-                key={COMPRESSOR_BORDER_COLORS[index + 1]}
+            {BLDC_BAR_COLORS.slice(1, 4).map((fill, index) => (
+              <BLDCLegendDot
+                key={BLDC_BORDER_COLORS[index + 1]}
                 fill={fill}
-                border={COMPRESSOR_BORDER_COLORS[index + 1]}
+                border={BLDC_BORDER_COLORS[index + 1]}
               />
             ))}
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-[#1666C5]" />
           <span className="text-sm font-semibold text-[#1666C5] sm:text-base">
-            recommended compressors
+            recommended BLDC fans
           </span>
         </div>
       </div>
@@ -209,14 +210,14 @@ function CompressorChartsLegend() {
   )
 }
 
-export function CompressorRecommendationCharts({
+export function BLDCFanRecommendationCharts({
   currentSystem,
   recommendations,
-}: CompressorRecommendationChartsProps) {
+}: BLDCFanRecommendationChartsProps) {
   const energyRows = useMemo(
     () => [
       {
-        displayName: `${currentSystem.make} ${currentSystem.model}`.trim(),
+        displayName: currentSystem.model?.trim() || 'Current fan system',
         annualEnergy: currentSystem.annualEnergy,
       },
       ...recommendations.slice(0, 3).map((recommendation) => ({
@@ -224,7 +225,7 @@ export function CompressorRecommendationCharts({
         annualEnergy: recommendation.recommendedAnnualEnergy ?? 0,
       })),
     ],
-    [currentSystem.annualEnergy, currentSystem.make, currentSystem.model, recommendations]
+    [currentSystem.annualEnergy, currentSystem.model, recommendations]
   )
 
   const leadRecommendation = recommendations[0] ?? null
@@ -232,7 +233,7 @@ export function CompressorRecommendationCharts({
   const newAnnualCost =
     leadRecommendation?.recommendedAnnualCost ??
     Math.max(0, currentAnnualCost - (leadRecommendation?.costSavings ?? 0))
-  const energySavingsCost = Math.max(0, leadRecommendation?.costSavings ?? 0)
+  const annualCostSavings = Math.max(0, leadRecommendation?.costSavings ?? 0)
 
   const energyChartData = useMemo<ChartData<'bar'>>(
     () => ({
@@ -242,10 +243,10 @@ export function CompressorRecommendationCharts({
           label: 'Annual Energy',
           data: energyRows.map((row) => row.annualEnergy),
           backgroundColor: energyRows.map(
-            (_, index) => COMPRESSOR_BAR_COLORS[index] ?? COMPRESSOR_BAR_COLORS.at(-1)
+            (_, index) => BLDC_BAR_COLORS[index] ?? BLDC_BAR_COLORS.at(-1)
           ),
           borderColor: energyRows.map(
-            (_, index) => COMPRESSOR_BORDER_COLORS[index] ?? COMPRESSOR_BORDER_COLORS.at(-1)
+            (_, index) => BLDC_BORDER_COLORS[index] ?? BLDC_BORDER_COLORS.at(-1)
           ),
           borderWidth: 1,
           borderRadius: 0,
@@ -335,7 +336,7 @@ export function CompressorRecommendationCharts({
   )
 
   const energyValueLabelsPlugin = useMemo(
-    () => createValueLabelPlugin('compressor-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
+    () => createValueLabelPlugin('bldc-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
     []
   )
 
@@ -360,7 +361,7 @@ export function CompressorRecommendationCharts({
         },
       ],
     }),
-    [currentAnnualCost, energySavingsCost, newAnnualCost]
+    [currentAnnualCost, annualCostSavings, newAnnualCost]
   )
 
   const waterfallChartOptions = useMemo<ChartOptions<'bar'>>(
@@ -455,7 +456,7 @@ export function CompressorRecommendationCharts({
 
   const waterfallValueLabelsPlugin = useMemo(
     () =>
-      createValueLabelPlugin('compressor-waterfall-labels', (rawValue, index) => {
+      createValueLabelPlugin('bldc-waterfall-labels', (rawValue, index) => {
         if (!Array.isArray(rawValue)) {
           return formatCurrency(Number(rawValue))
         }
@@ -473,17 +474,17 @@ export function CompressorRecommendationCharts({
 
   return (
     <div className="space-y-4">
-      <CompressorChartsLegend />
+      <BLDCFanChartsLegend />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="border-border/80">
-        <CardHeader>
-          <CardTitle>Energy Consumption Comparison Graph</CardTitle>
+          <CardHeader>
+            <CardTitle>Energy Consumption Comparison Graph</CardTitle>
             <CardDescription>
-              Current compressor versus the recommended compressor options.
+              Current fan system versus the recommended BLDC fan options.
             </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </CardHeader>
+          <CardContent>
             <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
               <Bar
                 data={energyChartData}
@@ -496,12 +497,12 @@ export function CompressorRecommendationCharts({
 
         <Card className="border-border/80">
           <CardHeader>
-            <CardTitle>Annual Compressor Energy Cost Savings</CardTitle>
+            <CardTitle>Annual BLDC Fan Energy Cost Savings</CardTitle>
             <CardDescription>
-              Waterfall view for the strongest recommended compressor option.
+              Waterfall view for the strongest recommended BLDC fan option.
             </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </CardHeader>
+          <CardContent>
             <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
               <Bar
                 data={waterfallChartData}
