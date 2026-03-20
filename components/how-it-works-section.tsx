@@ -5,16 +5,19 @@ const steps = [
     number: '01',
     icon: ClipboardList,
     title: 'Enter Equipment Details',
+    mobileTitle: 'Enter Details',
   },
   {
     number: '02',
     icon: Cpu,
     title: 'Compare Upgrade Paths',
+    mobileTitle: 'Compare Paths',
   },
   {
     number: '03',
     icon: FileCheck,
     title: 'Get Recommendations',
+    mobileTitle: 'Get Recos',
   },
 ]
 
@@ -32,19 +35,25 @@ export function HowItWorksSection() {
         </div>
 
         <div className="relative mt-8 sm:mt-10">
-          <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-6 md:grid-cols-3 xl:gap-6">
             {steps.map((step, index) => (
-              <div key={index} className="rounded-3xl border-2 border-slate-900/10 bg-card p-4 text-left shadow-[4px_4px_0_0_rgba(15,23,42,0.10)] sm:p-5">
-                <div className="mb-4 flex items-center justify-between gap-4">
-                  <div className="neo-chip inline-flex h-10 min-w-10 items-center justify-center rounded-2xl bg-primary/10 px-3 text-sm font-bold text-primary sm:h-11 sm:min-w-11">
+              <div
+                key={index}
+                className="neo-card homepage-card-static min-w-0 rounded-[22px] p-3 text-center sm:rounded-[30px] sm:p-6 sm:text-left"
+              >
+                <div className="mb-3 flex flex-col items-center gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-primary/10 bg-primary/5 px-2 text-xs font-bold text-primary sm:h-11 sm:min-w-11 sm:px-3 sm:text-sm">
                     {step.number}
                   </div>
-                  <div className="neo-chip flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:h-11 sm:w-11">
-                    <step.icon className="h-5 w-5" />
+                  <div className="brand-gradient-icon flex h-8 w-8 items-center justify-center rounded-full sm:h-11 sm:w-11">
+                    <step.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                 </div>
 
-                <h3 className="text-base font-semibold sm:text-xl">{step.title}</h3>
+                <h3 className="min-w-0 text-balance break-words text-[11px] font-semibold leading-4 text-primary sm:text-xl sm:leading-7">
+                  <span className="sm:hidden">{step.mobileTitle}</span>
+                  <span className="hidden sm:inline">{step.title}</span>
+                </h3>
               </div>
             ))}
           </div>

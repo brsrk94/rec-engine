@@ -1,0 +1,71 @@
+,,,,,,,,,Company Name,Model Name,Total System Watts,Colour Temperature,CRI,Lumens,Voltage,Power Factor,Lifespan,Surge Protection,Energy Consumption,,
+,,,,,,,,,Surya,LED Bulb 5W,5W,6500K,≥80,450,220-240V,>0.9,15000 hrs,2.5kV,5 kWh/1000h,,
+,,,,,,,,,Surya,LED Bulb 7W,7W,6500K,≥80,650,220-240V,>0.9,15000 hrs,2.5kV,7 kWh/1000h,,
+,,,,,,,,,Surya,LED Bulb 9W,9W,6500K,≥80,900,220-240V,>0.9,20000 hrs,3kV,9 kWh/1000h,,
+,,,,,,,,,Surya,LED Bulb 12W,12W,6500K,≥80,1100,220-240V,>0.9,20000 hrs,3kV,12 kWh/1000h,,
+,,,,,,,,,Surya,LED Bulb 15W,15W,6500K,≥80,1400,220-240V,>0.9,25000 hrs,4kV,15 kWh/1000h,,
+,,,,,,,,,,Surya,LED Bulb 9W Warm,9W,3000K,≥80,800,220-240V,>0.9,20000 hrs,3kV,9 kWh/1000h,
+,,,,,,,,,,Surya,LED Bulb 9W Neutral,9W,4000K,≥80,850,220-240V,>0.9,20000 hrs,3kV,9 kWh/1000h,
+,,,,,,,,,,Surya,LED Bulb 12W Warm,12W,3000K,≥80,1050,220-240V,>0.9,20000 hrs,3kV,12 kWh/1000h,
+,,,,,,,,,,Surya,LED Bulb 12W Neutral,12W,4000K,≥80,1100,220-240V,>0.9,20000 hrs,3kV,12 kWh/1000h,
+,,,,,,,,,,Surya,LED Bulb 15W Warm,15W,3000K,≥80,1300,220-240V,>0.9,25000 hrs,4kV,15 kWh/1000h,
+,,,,,,,,,,Surya,LED Batten 18W,18W,6500K,≥80,1800,220-240V,>0.95,25000 hrs,3kV,18 kWh/1000h,
+,,,,,,,,,,Surya,LED Batten 20W,20W,6500K,≥80,2000,220-240V,>0.95,25000 hrs,3kV,20 kWh/1000h,
+,,,,,,,,,,Surya,LED Batten 22W,22W,6500K,≥80,2200,220-240V,>0.95,30000 hrs,4kV,22 kWh/1000h,
+,,,,,,,,,,Surya,LED Batten 24W,24W,6500K,≥80,2400,220-240V,>0.95,30000 hrs,4kV,24 kWh/1000h,
+,,,,,,,,,,Surya,LED Batten 36W,36W,6500K,≥80,3600,220-240V,>0.95,30000 hrs,4kV,36 kWh/1000h,
+,,,,,,,,,,Surya,Panel Light 6W,6W,6500K,≥80,600,220-240V,>0.9,25000 hrs,2.5kV,6 kWh/1000h,
+,,,,,,,,,,Surya,Panel Light 9W,9W,6500K,≥80,900,220-240V,>0.9,25000 hrs,3kV,9 kWh/1000h,
+,,,,,,,,,,Surya,Panel Light 12W,12W,6500K,≥80,1200,220-240V,>0.9,30000 hrs,3kV,12 kWh/1000h,
+,,,,,,,,,,Surya,Panel Light 15W,15W,6500K,≥80,1500,220-240V,>0.9,30000 hrs,4kV,15 kWh/1000h,
+,,,,,,,,,,Surya,Panel Light 18W,18W,6500K,≥80,1800,220-240V,>0.9,30000 hrs,4kV,18 kWh/1000h,
+,,,,,,,,,,Surya,Downlight 7W,7W,6500K,≥80,650,220-240V,>0.9,25000 hrs,2.5kV,7 kWh/1000h,
+,,,,,,,,,,Surya,Downlight 10W,10W,6500K,≥80,950,220-240V,>0.9,25000 hrs,3kV,10 kWh/1000h,
+,,,,,,,,,,Surya,Downlight 15W,15W,6500K,≥80,1400,220-240V,>0.9,30000 hrs,4kV,15 kWh/1000h,
+,,,,,,,,,,Surya,Downlight 20W,20W,6500K,≥80,1900,220-240V,>0.9,30000 hrs,4kV,20 kWh/1000h,
+,,,,,,,,,,Surya,Downlight 25W,25W,6500K,≥80,2400,220-240V,>0.9,30000 hrs,4kV,25 kWh/1000h,
+,,,,,,,,,,Surya,Street Light 30W,30W,5700K,≥70,3300,220-240V,>0.95,50000 hrs,4kV,30 kWh/1000h,
+,,,,,,,,,,Surya,Street Light 50W,50W,5700K,≥70,5500,220-240V,>0.95,50000 hrs,6kV,50 kWh/1000h,
+,,,,,,,,,,Surya,Street Light 70W,70W,5700K,≥70,7700,220-240V,>0.95,50000 hrs,6kV,70 kWh/1000h,
+,,,,,,,,,,Surya,Street Light 100W,100W,5700K,≥70,11000,220-240V,>0.95,50000 hrs,6kV,100 kWh/1000h,
+,,,,,,,,,,Surya,Street Light 150W,150W,5700K,≥70,16000,220-240V,>0.95,50000 hrs,10kV,150 kWh/1000h,
+,,,,,,,,,,Surya,Flood Light 30W,30W,5700K,≥70,3300,220-240V,>0.95,50000 hrs,4kV,30 kWh/1000h,
+,,,,,,,,,,Surya,Flood Light 50W,50W,5700K,≥70,5500,220-240V,>0.95,50000 hrs,6kV,50 kWh/1000h,
+,,,,,,,,,,Surya,Flood Light 100W,100W,5700K,≥70,11000,220-240V,>0.95,50000 hrs,6kV,100 kWh/1000h,
+,,,,,,,,,,Surya,Flood Light 150W,150W,5700K,≥70,16500,220-240V,>0.95,50000 hrs,10kV,150 kWh/1000h,
+,,,,,,,,,,Surya,Flood Light 200W,200W,5700K,≥70,22000,220-240V,>0.95,50000 hrs,10kV,200 kWh/1000h,
+,,,,,,,,,,Surya,T-Bulb 20W,20W,6500K,≥80,2000,220-240V,>0.95,25000 hrs,4kV,20 kWh/1000h,
+,,,,,,,,,,Surya,T-Bulb 30W,30W,6500K,≥80,3000,220-240V,>0.95,30000 hrs,5kV,30 kWh/1000h,
+,,,,,,,,,,Surya,T-Bulb 40W,40W,6500K,≥80,4000,220-240V,>0.95,30000 hrs,5kV,40 kWh/1000h,
+,,,,,,,,,,Surya,T-Bulb 50W,50W,6500K,≥80,5000,220-240V,>0.95,30000 hrs,6kV,50 kWh/1000h,
+,,,,,,,,,,Surya,T-Bulb 60W,60W,6500K,≥80,6000,220-240V,>0.95,30000 hrs,6kV,60 kWh/1000h,
+,,,,,,,,,,Surya,Highbay 100W,100W,5700K,≥70,12000,220-240V,>0.95,50000 hrs,6kV,100 kWh/1000h,
+,,,,,,,,,,Surya,Highbay 120W,120W,5700K,≥70,14400,220-240V,>0.95,50000 hrs,6kV,120 kWh/1000h,
+,,,,,,,,,,Surya,Highbay 150W,150W,5700K,≥70,18000,220-240V,>0.95,50000 hrs,6kV,150 kWh/1000h,
+,,,,,,,,,,Surya,Highbay 200W,200W,5700K,≥70,24000,220-240V,>0.95,50000 hrs,10kV,200 kWh/1000h,
+,,,,,,,,,,Surya,Highbay 240W,240W,5700K,≥70,28800,220-240V,>0.95,50000 hrs,10kV,240 kWh/1000h,
+,,,,,,,,,,Surya,COB Spotlight 7W,7W,3000K,≥80,600,36°,220-240V,>0.9,25000 hrs,IP20,7 kWh/1000h
+,,,,,,,,,,Surya,COB Spotlight 10W,10W,3000K,≥80,900,36°,220-240V,>0.9,25000 hrs,IP20,10 kWh/1000h
+,,,,,,,,,,Surya,COB Spotlight 15W,15W,3000K,≥80,1400,38°,220-240V,>0.9,30000 hrs,IP20,15 kWh/1000h
+,,,,,,,,,,Surya,COB Spotlight 20W,20W,3000K,≥80,1800,40°,220-240V,>0.9,30000 hrs,IP20,20 kWh/1000h
+,,,,,,,,,,Surya,COB Spotlight 30W,30W,3000K,≥80,2700,60°,220-240V,>0.9,30000 hrs,IP20,30 kWh/1000h
+,,,,,,,,,,Surya,Track Light 10W,10W,3000K,≥80,1000,24°,220-240V,>0.9,30000 hrs,IP20,10 kWh/1000h
+,,,,,,,,,,Surya,Track Light 20W,20W,3000K,≥80,2000,24°,220-240V,>0.9,30000 hrs,IP20,20 kWh/1000h
+,,,,,,,,,,Surya,Track Light 30W,30W,3000K,≥80,3000,36°,220-240V,>0.9,35000 hrs,IP20,30 kWh/1000h
+,,,,,,,,,,Surya,Track Light 35W,35W,3000K,≥80,3500,38°,220-240V,>0.9,35000 hrs,IP20,35 kWh/1000h
+,,,,,,,,,,Surya,Track Light 40W,40W,3000K,≥80,4000,40°,220-240V,>0.9,35000 hrs,IP20,40 kWh/1000h
+,,,,,,,,,,Surya,Bulkhead 10W,10W,6500K,≥80,1000,220-240V,>0.9,25000 hrs,IP65,3kV,10 kWh/1000h
+,,,,,,,,,,Surya,Bulkhead 15W,15W,6500K,≥80,1500,220-240V,>0.9,25000 hrs,IP65,3kV,15 kWh/1000h
+,,,,,,,,,,Surya,Bulkhead 20W,20W,6500K,≥80,2000,220-240V,>0.9,30000 hrs,IP65,4kV,20 kWh/1000h
+,,,,,,,,,,Surya,Bulkhead 25W,25W,6500K,≥80,2500,220-240V,>0.9,30000 hrs,IP65,4kV,25 kWh/1000h
+,,,,,,,,,,Surya,Bulkhead 30W,30W,6500K,≥80,3000,220-240V,>0.9,30000 hrs,IP65,4kV,30 kWh/1000h
+,,,,,,,,,,Surya,Bollard Light 10W,10W,3000K,≥80,800,220-240V,>0.9,25000 hrs,IP65,10 kWh/1000h,
+,,,,,,,,,,Surya,Bollard Light 15W,15W,3000K,≥80,1200,220-240V,>0.9,25000 hrs,IP65,15 kWh/1000h,
+,,,,,,,,,,Surya,Bollard Light 20W,20W,3000K,≥80,1600,220-240V,>0.9,30000 hrs,IP65,20 kWh/1000h,
+,,,,,,,,,,Surya,Garden Spike 7W,7W,3000K,≥80,500,220-240V,>0.9,25000 hrs,IP65,7 kWh/1000h,
+,,,,,,,,,,Surya,Garden Spike 12W,12W,3000K,≥80,900,220-240V,>0.9,25000 hrs,IP65,12 kWh/1000h,
+,,,,,,,,,,Surya,LED Strip 10W/m,10W,3000K,≥80,900,24V DC,>0.9,20000 hrs,IP20,10 kWh/1000h,
+,,,,,,,,,,Surya,LED Strip 14W/m,14W,4000K,≥80,1300,24V DC,>0.9,20000 hrs,IP20,14 kWh/1000h,
+,,,,,,,,,,Surya,LED Strip 18W/m,18W,6500K,≥80,1700,24V DC,>0.9,25000 hrs,IP20,18 kWh/1000h,
+,,,,,,,,,,Surya,LED Strip 20W/m,20W,6500K,≥80,1900,24V DC,>0.9,25000 hrs,IP20,20 kWh/1000h,
+,,,,,,,,,,Surya,LED Strip 24W/m,24W,6500K,≥80,2300,24V DC,>0.9,25000 hrs,IP20,24 kWh/1000h,

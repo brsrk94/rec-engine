@@ -4,14 +4,17 @@ const features = [
   {
     icon: Calculator,
     title: 'Calculation-Based Insights',
+    mobileTitle: 'Calc Insights',
   },
   {
     icon: Clock,
     title: 'Quick Assessment',
+    mobileTitle: 'Quick Assess',
   },
   {
     icon: TrendingUp,
     title: 'ROI Focused',
+    mobileTitle: 'ROI Focus',
   },
 ]
 
@@ -28,16 +31,19 @@ export function FeaturesSection() {
           </h2>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:mt-10 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-8 grid grid-cols-3 gap-2 sm:mt-10 sm:gap-5 md:grid-cols-3">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="rounded-xl border-2 border-slate-900/10 bg-card p-4 shadow-[4px_4px_0_0_rgba(15,23,42,0.10)] sm:p-5"
+              className="neo-card homepage-card flex min-h-[112px] min-w-0 flex-col items-center justify-center gap-2 rounded-[22px] p-3 text-center sm:min-h-[148px] sm:rounded-[26px] sm:gap-4 sm:p-6"
             >
-              <div className="neo-chip mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-12 sm:w-12">
-                <feature.icon className="h-6 w-6" />
+              <div className="brand-gradient-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14">
+                <feature.icon className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <h3 className="text-lg font-semibold">{feature.title}</h3>
+              <h3 className="min-w-0 text-balance break-words text-[11px] font-semibold leading-4 text-primary sm:text-lg sm:leading-6">
+                <span className="sm:hidden">{feature.mobileTitle}</span>
+                <span className="hidden sm:inline">{feature.title}</span>
+              </h3>
             </div>
           ))}
         </div>

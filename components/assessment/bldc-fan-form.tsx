@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, RefreshCcw } from 'lucide-react'
+import { ArrowLeft, RefreshCcw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
@@ -33,8 +33,29 @@ interface BLDCFanFormProps {
 }
 
 const mixedCaseSuffixClassName =
-  'right-2 text-[9px] normal-case tracking-normal sm:right-3 sm:text-[10px]'
-const fullWidthSelectTriggerClassName = 'h-10 w-full sm:h-9'
+  'right-3 text-[10px] normal-case tracking-normal sm:text-[11px]'
+const fullWidthSelectTriggerClassName =
+  'h-11 w-full rounded-2xl border-border/70 bg-white text-left shadow-none'
+const sectionCardClassName =
+  'form-card-static h-full rounded-3xl border border-border/70 bg-white/95'
+const sectionHeaderClassName = 'pb-1'
+const sectionTitleClassName = 'text-lg font-semibold tracking-tight text-foreground'
+
+function getRoomSizeFromSweepMm(sweepMm: number | null | undefined) {
+  if (typeof sweepMm !== 'number' || !Number.isFinite(sweepMm) || sweepMm <= 0) {
+    return null
+  }
+
+  if (sweepMm <= 900) {
+    return 'small' as const
+  }
+
+  if (sweepMm <= 1200) {
+    return 'medium' as const
+  }
+
+  return 'large' as const
+}
 
 function InputWithSuffix({
   suffix,
@@ -52,8 +73,9 @@ function InputWithSuffix({
       <Input
         {...props}
         className={cn(
-          'h-10 pr-20 text-sm sm:h-9',
+          'h-11 rounded-2xl border-border/70 bg-white pr-20 text-sm shadow-none',
           suffix.length > 6 && 'pr-24 sm:pr-28',
+          props.disabled && 'bg-muted/45 text-muted-foreground',
           inputClassName
         )}
       />
@@ -74,7 +96,7 @@ function FieldHint({
   className,
 }: React.ComponentProps<'p'>) {
   return (
-    <p className={cn('min-h-5 text-xs text-muted-foreground', className)}>
+    <p className={cn('min-h-10 text-xs leading-5 text-muted-foreground', className)}>
       {children ?? <span className="invisible">placeholder</span>}
     </p>
   )
@@ -117,6 +139,11 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
     )
   }, [catalog, fan.conventional_fan_catalog_key, fan.selected_conventional_catalog_fan])
 
+  const inferredRoomSizeFromConventionalFan = useMemo(
+    () => getRoomSizeFromSweepMm(selectedConventionalCatalogFan?.sweep_mm),
+    [selectedConventionalCatalogFan]
+  )
+
   useEffect(() => {
     if (!selectedConventionalCatalogFan) {
       return
@@ -133,7 +160,8 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
       storedKey === selectedKey &&
       fan.conventional_fan_make === selectedConventionalCatalogFan.make &&
       fan.conventional_fan_make_model === selectedConventionalCatalogFan.model &&
-      fan.conventional_fan_power_rating_w === nextPower
+      fan.conventional_fan_power_rating_w === nextPower &&
+      (!inferredRoomSizeFromConventionalFan || fan.room_size === inferredRoomSizeFromConventionalFan)
     ) {
       return
     }
@@ -143,6 +171,7 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
       conventional_fan_make: selectedConventionalCatalogFan.make,
       conventional_fan_make_model: selectedConventionalCatalogFan.model,
       conventional_fan_power_rating_w: nextPower,
+      room_size: inferredRoomSizeFromConventionalFan ?? fan.room_size,
       selected_conventional_catalog_fan: selectedConventionalCatalogFan,
     })
   }, [
@@ -150,7 +179,9 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
     fan.conventional_fan_make,
     fan.conventional_fan_make_model,
     fan.conventional_fan_power_rating_w,
+    fan.room_size,
     fan.selected_conventional_catalog_fan,
+    inferredRoomSizeFromConventionalFan,
     selectedConventionalCatalogFan,
     updateBLDCFan,
   ])
@@ -330,29 +361,30 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
       variants={fadeUpVariants}
     >
       <div className="mb-8 flex items-start gap-3 sm:items-center sm:gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onBack}
+          className="h-11 w-11 rounded-2xl border-border/70 bg-white shadow-none"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-          <AssessmentEquipmentImage equipmentId="bldc_fan" className="h-10 w-10 sm:h-12 sm:w-12" />
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+          <AssessmentEquipmentImage equipmentId="bldc_fan" className="h-11 w-11 sm:h-12 sm:w-12" />
           <div className="min-w-0">
             <h1 className="text-xl font-bold leading-tight sm:text-2xl">BLDC Fan Assessment</h1>
-            <p className="text-muted-foreground">Capture baseline, catalog selection, and savings assumptions</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid gap-6 xl:grid-cols-2">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Current Fan Details</CardTitle>
-              <CardDescription>
-                Conventional induction motor fan inputs for your baseline.
-              </CardDescription>
+          <Card className={sectionCardClassName}>
+            <CardHeader className={sectionHeaderClassName}>
+              <CardTitle className={sectionTitleClassName}>Current Fan Details</CardTitle>
             </CardHeader>
-            <CardContent>
-              <FieldGroup>
+            <CardContent className="pt-6">
+              <FieldGroup className="gap-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field className="justify-start gap-2">
                     <FieldLabel className="text-sm leading-snug">
@@ -472,7 +504,16 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
                       </SelectContent>
                     </Select>
                     <FieldHint className="mt-1">
-                      Default assumption is a 16 x 16 ft room, mapped to <strong>Large</strong>.
+                      {selectedConventionalCatalogFan && inferredRoomSizeFromConventionalFan ? (
+                        <>
+                          Auto-detected from {selectedConventionalCatalogFan.sweep_mm} mm conventional
+                          fan sweep: <strong>{getBLDCFanRoomSizeConfig(inferredRoomSizeFromConventionalFan).label}</strong>.
+                        </>
+                      ) : (
+                        <>
+                          Default assumption is a 16 x 16 ft room, mapped to <strong>Large</strong>.
+                        </>
+                      )}
                     </FieldHint>
                   </Field>
                 </div>
@@ -480,15 +521,12 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
             </CardContent>
           </Card>
 
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Usage Inputs</CardTitle>
-              <CardDescription>
-                Runtime, tariff, emissions factor, and quantity assumptions.
-              </CardDescription>
+          <Card className={sectionCardClassName}>
+            <CardHeader className={sectionHeaderClassName}>
+              <CardTitle className={sectionTitleClassName}>Usage Inputs</CardTitle>
             </CardHeader>
-            <CardContent>
-              <FieldGroup>
+            <CardContent className="pt-6">
+              <FieldGroup className="gap-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field className="justify-start gap-2">
                     <FieldLabel className="text-sm leading-snug">Daily runtime</FieldLabel>
@@ -580,15 +618,12 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
             </CardContent>
           </Card>
 
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>BLDC Fan Selection</CardTitle>
-              <CardDescription>
-                Pick BLDC fan make and model from `equipment_catalog.json` to auto-fill BLDC wattage.
-              </CardDescription>
+          <Card className={sectionCardClassName}>
+            <CardHeader className={sectionHeaderClassName}>
+              <CardTitle className={sectionTitleClassName}>BLDC Fan Selection</CardTitle>
             </CardHeader>
-            <CardContent>
-              <FieldGroup>
+            <CardContent className="pt-6">
+              <FieldGroup className="gap-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field className="justify-start gap-2">
                     <FieldLabel className="text-sm leading-snug">BLDC fan make</FieldLabel>
@@ -712,7 +747,7 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
                 </div>
 
                 {catalogError ? (
-                  <div className="neo-panel rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                     <p className="font-semibold">BLDC catalog unavailable</p>
                     <p className="mt-1">{catalogError}</p>
                     <Button
@@ -731,15 +766,12 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
             </CardContent>
           </Card>
 
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Financial Assumptions</CardTitle>
-              <CardDescription>
-                Inputs for payback, present value, NPV, and marginal abatement cost.
-              </CardDescription>
+          <Card className={sectionCardClassName}>
+            <CardHeader className={sectionHeaderClassName}>
+              <CardTitle className={sectionTitleClassName}>Financial Assumptions</CardTitle>
             </CardHeader>
-            <CardContent>
-              <FieldGroup>
+            <CardContent className="pt-6">
+              <FieldGroup className="gap-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field className="justify-start gap-2">
                     <FieldLabel className="text-sm leading-snug">
@@ -763,7 +795,7 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
 
                   <Field className="justify-start gap-2">
                     <FieldLabel className="text-sm leading-snug">
-                      Conventional fan installation cost
+                      Conventional installation cost
                     </FieldLabel>
                     <InputWithSuffix
                       type="number"
@@ -840,24 +872,28 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
         </div>
 
         {showValidationErrors && missingFieldLabels.length > 0 ? (
-          <div className="neo-panel rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-900">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             <p className="font-semibold">Please fill these fields before generating recommendations:</p>
             <p className="mt-1">{missingFieldLabels.join(', ')}</p>
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:justify-between">
-          <Button type="button" variant="outline" onClick={onBack} className="w-full sm:w-auto">
+        <div className="flex flex-col gap-4 border-t border-border/70 pt-2 sm:flex-row sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="w-full rounded-2xl border-border/70 bg-white shadow-none sm:w-auto"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Change Equipment
           </Button>
           <Button
             type="submit"
-            className="w-full gap-2 bg-[#065F46] text-white hover:bg-[#054f3a] sm:w-auto"
+            className="neo-cta w-full rounded-2xl text-sm font-medium tracking-[-0.01em] sm:w-auto"
             disabled={isCatalogLoading}
           >
             Generate Recommendations
-            <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </form>

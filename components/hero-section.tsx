@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { ArrowRight, BadgeCheck, Leaf, TrendingDown, Zap } from 'lucide-react'
+import { Leaf, TrendingDown, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 export function HeroSection() {
@@ -8,32 +8,47 @@ export function HeroSection() {
       icon: TrendingDown,
       value: '30%',
       label: 'Average energy saving potential',
+      mobileLabel: 'Avg. savings',
     },
     {
       icon: Zap,
       value: '2 yr',
       label: 'Typical payback window',
+      mobileLabel: 'Payback',
     },
     {
       icon: Leaf,
       value: '25%',
       label: 'Indicative CO2 reduction',
+      mobileLabel: 'CO2 reduction',
     },
   ]
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-secondary/40 via-background to-background pt-0">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(6,95,70,0.12),transparent_62%)]" />
-      <div className="mx-auto max-w-7xl px-3 pb-9 pt-2 sm:px-4 sm:pb-12 md:px-6 md:pb-20 md:pt-2">
+    <section className="relative overflow-hidden bg-gradient-to-b from-secondary/40 via-background to-background pt-8 sm:pt-10 md:pt-14">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[25rem] sm:h-[27rem] md:h-[29rem]"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(5, 160, 112, 0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(5, 160, 112, 0.14) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+          maskImage: 'linear-gradient(to bottom, black 0%, black 76%, transparent 100%)',
+        }}
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(5,160,112,0.10),transparent_58%)]" />
+      <div className="relative z-10 mx-auto max-w-7xl px-3 pb-9 sm:px-4 sm:pb-12 md:px-6 md:pb-20">
         <div className="mx-auto max-w-5xl text-center">
-          <div className="neo-chip mx-auto flex max-w-[20rem] flex-wrap items-center justify-center gap-1.5 rounded-full bg-primary/6 px-2 py-1.5 text-center text-[11px] leading-tight font-medium text-primary transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:max-w-full sm:gap-2 sm:px-3 sm:py-2 sm:text-sm">
-            <BadgeCheck className="h-4 w-4" />
-            Industrial energy upgrade recommendations
+          <div className="inline-flex h-9 items-center justify-center rounded-3xl border border-[#05a070] bg-[linear-gradient(180deg,rgba(235,250,244,0.95),rgba(223,246,237,0.98))] px-5 text-base font-medium tracking-[-0.02em] text-[#05a070] sm:px-6 sm:text-lg">
+            <span>Midori</span>
+            <sup className="ml-0.5 self-start pt-2 text-[0.48em] font-medium leading-none">
+              TM
+            </sup>
           </div>
-
           <h1 className="mt-5 text-balance text-[1.8rem] font-bold leading-[1.08] tracking-tight sm:mt-6 sm:text-4xl sm:leading-tight md:text-5xl lg:text-6xl">
             Optimize Your{' '}
-            <span className="text-primary">Energy Efficiency</span>
+            <span className="bg-[linear-gradient(135deg,#10b981_0%,#006ded_100%)] bg-clip-text text-transparent">
+              Energy Efficiency
+            </span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-[15px] leading-6 text-muted-foreground sm:mt-6 sm:max-w-3xl sm:text-lg md:text-xl">
             Get smart upgrade recommendations for your industrial equipment.
@@ -45,32 +60,34 @@ export function HeroSection() {
             <Link href="/assessment" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="neo-cta h-12 w-full rounded-[18px] gap-2 bg-white px-4 text-base font-extrabold tracking-[-0.01em] text-[#065F46] hover:bg-white/90 sm:w-auto sm:px-5"
+                className="neo-cta h-8 w-full rounded-3xl gap-2 px-5 text-base font-bold tracking-[-0.01em] sm:w-auto"
               >
-                Start Free Assessment
-                <ArrowRight className="h-4 w-4" />
+                Start Assessment
               </Button>
             </Link>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:mt-10 sm:grid-cols-2 sm:gap-4 md:mt-12 xl:grid-cols-3">
+          <div className="mt-8 grid grid-cols-3 gap-2 sm:mt-10 sm:gap-4 md:mt-12">
             {metrics.map((metric) => (
               <div
                 key={metric.label}
-                className="neo-card rounded-2xl bg-card p-4 text-left sm:p-6"
+                className="neo-card homepage-card min-w-0 rounded-[22px] p-3 text-center sm:rounded-[26px] sm:p-6 sm:text-left"
               >
-                <div className="flex items-center gap-2.5 text-primary sm:gap-3">
-                  <div className="neo-chip flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 sm:h-11 sm:w-11">
-                    <metric.icon className="h-5 w-5" />
+                <div className="flex flex-col items-center gap-2 text-primary sm:flex-row sm:items-center sm:gap-3">
+                  <div className="brand-gradient-icon flex h-9 w-9 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                    <metric.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <span className="text-[1.65rem] font-bold tracking-tight sm:text-3xl">{metric.value}</span>
+                  <span className="text-lg font-bold tracking-tight sm:text-3xl">{metric.value}</span>
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground sm:mt-4">{metric.label}</p>
+                <p className="mt-2 min-w-0 text-balance break-words text-[10px] leading-3.5 text-muted-foreground sm:mt-4 sm:text-sm sm:leading-5">
+                  <span className="sm:hidden">{metric.mobileLabel}</span>
+                  <span className="hidden sm:inline">{metric.label}</span>
+                </p>
               </div>
             ))}
           </div>
 
-          <div className="neo-panel mt-8 rounded-3xl bg-card p-4 text-left sm:p-6 md:mt-10 md:p-7">
+          <div className="neo-panel homepage-card brand-surface mt-8 rounded-[30px] p-4 text-left sm:p-6 md:mt-10 md:p-7">
             <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">
@@ -85,11 +102,11 @@ export function HeroSection() {
                 </p>
               </div>
               <div className="grid gap-3">
-                <div className="neo-card rounded-2xl bg-muted/35 px-4 py-3">
+                <div className="neo-card homepage-card rounded-2xl bg-white/80 px-4 py-3">
                   <p className="text-sm font-medium">Motor catalog data</p>
                   <p className="mt-1 text-sm text-muted-foreground">Make, model, class, capex</p>
                 </div>
-                <div className="neo-card rounded-2xl bg-muted/35 px-4 py-3">
+                <div className="neo-card homepage-card rounded-2xl bg-white/80 px-4 py-3">
                   <p className="text-sm font-medium">Instant decision outputs</p>
                   <p className="mt-1 text-sm text-muted-foreground">Savings, payback, emissions</p>
                 </div>

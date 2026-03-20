@@ -16,7 +16,7 @@ export function FitsolLogo({ className, logoClassName }: FitsolLogoProps) {
       href="/"
       aria-label="Fitsol home"
       className={cn(
-        'shrink-0 rounded-[8px] bg-white px-2.5 py-[5px] shadow-sm sm:px-3 sm:py-[6px]',
+        'shrink-0 rounded-[14px] border border-white/60 bg-white/95 px-2.5 py-[5px] backdrop-blur-sm sm:px-3 sm:py-[6px]',
         className
       )}
     >

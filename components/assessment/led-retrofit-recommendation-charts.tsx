@@ -24,19 +24,19 @@ import { formatIndianNumber } from '@/lib/formatting'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
-interface BLDCFanRecommendationChartsProps {
+interface LEDRetrofitRecommendationChartsProps {
   currentSystem: AssessmentCurrentSystemSnapshot
   recommendations: AssessmentRecommendationCardSnapshot[]
 }
 
-const BLDC_BAR_COLORS = [
+const LED_BAR_COLORS = [
   'rgba(103, 104, 125, 0.94)',
   'rgba(5, 160, 112, 0.94)',
   'rgba(5, 10, 153, 0.92)',
   'rgba(234, 179, 8, 0.92)',
 ]
 
-const BLDC_BORDER_COLORS = ['#67687D', '#05A070', '#050A99', '#EAB308']
+const LED_BORDER_COLORS = ['#67687D', '#05A070', '#050A99', '#EAB308']
 const WATERFALL_BAR_COLORS = [
   'rgba(103, 104, 125, 0.94)',
   'rgba(5, 160, 112, 0.94)',
@@ -120,7 +120,7 @@ function createValueLabelPlugin(
 }
 
 const waterfallConnectorPlugin: Plugin<'bar'> = {
-  id: 'bldc-waterfall-connectors',
+  id: 'led-waterfall-connectors',
   afterDatasetsDraw(chart) {
     const meta = chart.getDatasetMeta(0)
     const bars = meta.data
@@ -168,7 +168,7 @@ const waterfallConnectorPlugin: Plugin<'bar'> = {
   },
 }
 
-function BLDCLegendDot({ fill, border }: { fill: string; border: string }) {
+function LEDLegendDot({ fill, border }: { fill: string; border: string }) {
   return (
     <span
       aria-hidden="true"
@@ -178,31 +178,31 @@ function BLDCLegendDot({ fill, border }: { fill: string; border: string }) {
   )
 }
 
-function BLDCFanChartsLegend() {
+function LEDChartsLegend() {
   return (
     <div className="neo-panel rounded-2xl bg-card px-4 py-4 sm:px-5">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <BLDCLegendDot fill={BLDC_BAR_COLORS[0]} border={BLDC_BORDER_COLORS[0]} />
+          <LEDLegendDot fill={LED_BAR_COLORS[0]} border={LED_BORDER_COLORS[0]} />
           <ArrowRight className="h-4 w-4 shrink-0 text-[#67687D]" />
           <span className="text-sm font-semibold text-[#67687D] sm:text-base">
-            current fan system
+            current bulb system
           </span>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            {BLDC_BAR_COLORS.slice(1, 4).map((fill, index) => (
-              <BLDCLegendDot
-                key={`bldc-recommended-legend-${index}`}
+            {LED_BAR_COLORS.slice(1, 4).map((fill, index) => (
+              <LEDLegendDot
+                key={`led-recommended-legend-${index}`}
                 fill={fill}
-                border={BLDC_BORDER_COLORS[index + 1]}
+                border={LED_BORDER_COLORS[index + 1]}
               />
             ))}
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-[#05A070]" />
           <span className="text-sm font-semibold text-[#05A070] sm:text-base">
-            recommended BLDC fans
+            recommended LEDs
           </span>
         </div>
       </div>
@@ -210,10 +210,10 @@ function BLDCFanChartsLegend() {
   )
 }
 
-export function BLDCFanRecommendationCharts({
+export function LEDRetrofitRecommendationCharts({
   currentSystem,
   recommendations,
-}: BLDCFanRecommendationChartsProps) {
+}: LEDRetrofitRecommendationChartsProps) {
   const [useCompactAxisLabels, setUseCompactAxisLabels] = useState(false)
 
   useEffect(() => {
@@ -234,13 +234,13 @@ export function BLDCFanRecommendationCharts({
   const energyRows = useMemo(
     () => [
       {
-        displayName: currentSystem.model?.trim() || 'Current fan system',
+        displayName: currentSystem.model?.trim() || 'Current bulb system',
         compactLabel: currentSystem.make?.trim() || currentSystem.model?.trim() || 'Current',
         annualEnergy: currentSystem.annualEnergy,
       },
       ...recommendations.slice(0, 3).map((recommendation) => ({
         displayName: `${recommendation.make} ${recommendation.model}`.trim(),
-        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'BLDC',
+        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'LED',
         annualEnergy: recommendation.recommendedAnnualEnergy ?? 0,
       })),
     ],
@@ -252,22 +252,24 @@ export function BLDCFanRecommendationCharts({
   const newAnnualCost =
     leadRecommendation?.recommendedAnnualCost ??
     Math.max(0, currentAnnualCost - (leadRecommendation?.costSavings ?? 0))
-  const annualCostSavings = Math.max(0, leadRecommendation?.costSavings ?? 0)
 
   const energyChartData = useMemo<ChartData<'bar'>>(
     () => ({
       labels: energyRows.map((row) =>
-        wrapAxisLabel(useCompactAxisLabels ? row.compactLabel : row.displayName, useCompactAxisLabels ? 10 : 18)
+        wrapAxisLabel(
+          useCompactAxisLabels ? row.compactLabel : row.displayName,
+          useCompactAxisLabels ? 10 : 18
+        )
       ),
       datasets: [
         {
           label: 'Annual Energy',
           data: energyRows.map((row) => row.annualEnergy),
           backgroundColor: energyRows.map(
-            (_, index) => BLDC_BAR_COLORS[index] ?? BLDC_BAR_COLORS.at(-1)
+            (_, index) => LED_BAR_COLORS[index] ?? LED_BAR_COLORS.at(-1)
           ),
           borderColor: energyRows.map(
-            (_, index) => BLDC_BORDER_COLORS[index] ?? BLDC_BORDER_COLORS.at(-1)
+            (_, index) => LED_BORDER_COLORS[index] ?? LED_BORDER_COLORS.at(-1)
           ),
           borderWidth: 1,
           borderRadius: 0,
@@ -357,7 +359,7 @@ export function BLDCFanRecommendationCharts({
   )
 
   const energyValueLabelsPlugin = useMemo(
-    () => createValueLabelPlugin('bldc-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
+    () => createValueLabelPlugin('led-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
     []
   )
 
@@ -382,7 +384,7 @@ export function BLDCFanRecommendationCharts({
         },
       ],
     }),
-    [currentAnnualCost, annualCostSavings, newAnnualCost]
+    [currentAnnualCost, newAnnualCost]
   )
 
   const waterfallChartOptions = useMemo<ChartOptions<'bar'>>(
@@ -477,17 +479,12 @@ export function BLDCFanRecommendationCharts({
 
   const waterfallValueLabelsPlugin = useMemo(
     () =>
-      createValueLabelPlugin('bldc-waterfall-labels', (rawValue, index) => {
+      createValueLabelPlugin('led-waterfall-labels', (rawValue) => {
         if (!Array.isArray(rawValue)) {
           return formatCurrency(Number(rawValue))
         }
 
         const totalValue = Math.abs(Number(rawValue[1]) - Number(rawValue[0]))
-
-        if (index === 1) {
-          return `INR ${formatNumber(totalValue)}`
-        }
-
         return `INR ${formatNumber(totalValue)}`
       }),
     []
@@ -495,14 +492,14 @@ export function BLDCFanRecommendationCharts({
 
   return (
     <div className="space-y-4">
-      <BLDCFanChartsLegend />
+      <LEDChartsLegend />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="border-border/80">
           <CardHeader>
             <CardTitle>Energy Consumption Comparison Graph</CardTitle>
             <CardDescription>
-              Current fan system versus the recommended BLDC fan options.
+              Current bulb system versus the recommended LED options.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -518,9 +515,9 @@ export function BLDCFanRecommendationCharts({
 
         <Card className="border-border/80">
           <CardHeader>
-            <CardTitle>Annual BLDC Fan Energy Cost Savings</CardTitle>
+            <CardTitle>Annual LED Energy Cost Savings</CardTitle>
             <CardDescription>
-              Waterfall view for the strongest recommended BLDC fan option.
+              Waterfall view for the strongest recommended LED option.
             </CardDescription>
           </CardHeader>
           <CardContent>

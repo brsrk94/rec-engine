@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { BLDCFanCatalogItem } from '@/lib/bldc-fan-catalog'
+import type { LEDCatalogItem } from '@/lib/led-catalog'
 import type { MotorCatalogItem } from '@/lib/motor-catalog'
 
 export interface MotorAssessment {
@@ -89,6 +90,22 @@ export interface LEDRetrofitAssessment {
   wattage_per_fixture: string
   operating_hours_year: string
   electricity_tariff: string
+  conventional_bulb_model: string
+  conventional_bulb_power_rating_w: string
+  daily_runtime_hours: string
+  working_days_per_year: string
+  led_make: string
+  led_model: string
+  led_catalog_key: string
+  led_power_rating_w: string
+  number_of_bulbs_to_switch: string
+  led_capex_inr_per_led: string
+  led_installation_cost_inr_per_led: string
+  conventional_bulb_installation_cost_inr_per_bulb: string
+  current_years_of_operation: string
+  discount_factor_percent: string
+  led_lifetime_years: string
+  selected_catalog_led: LEDCatalogItem | null
 }
 
 export interface DGSetAssessment {
@@ -202,6 +219,22 @@ const initialLedRetrofitAssessment: LEDRetrofitAssessment = {
   wattage_per_fixture: '',
   operating_hours_year: '',
   electricity_tariff: '8',
+  conventional_bulb_model: '',
+  conventional_bulb_power_rating_w: '',
+  daily_runtime_hours: '',
+  working_days_per_year: '',
+  led_make: '',
+  led_model: '',
+  led_catalog_key: '',
+  led_power_rating_w: '',
+  number_of_bulbs_to_switch: '1',
+  led_capex_inr_per_led: '',
+  led_installation_cost_inr_per_led: '100',
+  conventional_bulb_installation_cost_inr_per_bulb: '20',
+  current_years_of_operation: '',
+  discount_factor_percent: '8',
+  led_lifetime_years: '10',
+  selected_catalog_led: null,
 }
 
 const initialDgSetAssessment: DGSetAssessment = {

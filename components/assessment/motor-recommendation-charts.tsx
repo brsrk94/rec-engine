@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarElement,
   CategoryScale,
@@ -8,71 +8,48 @@ import {
   Legend,
   LinearScale,
   Tooltip,
+  type Plugin,
   type ChartData,
   type ChartOptions,
 } from 'chart.js'
+import { ArrowRight } from 'lucide-react'
 import { Bar } from 'react-chartjs-2'
 
 import type { MotorRecommendationCard, MotorRecommendationResult } from '@/lib/motor-catalog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatIndianNumber } from '@/lib/formatting'
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-  Legend
-)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 interface MotorRecommendationChartsProps {
   currentSystem: MotorRecommendationResult['currentSystem']
   recommendations: MotorRecommendationCard[]
 }
 
-interface MotorChartRow {
-  motorLabel: string
-  currentEnergy: number
-  recommendedEnergy: number
-  energySavings: number
-  currentEmissions: number
-  recommendedEmissions: number
-  emissionSavings: number
-}
+const MOTOR_BAR_COLORS = [
+  'rgba(103, 104, 125, 0.94)',
+  'rgba(5, 160, 112, 0.94)',
+  'rgba(5, 10, 153, 0.92)',
+  'rgba(234, 179, 8, 0.92)',
+]
 
-interface ChartLegendEntry {
-  label: string
-  fill: string
-  border: string
-}
-
-interface ChartAnchorPoint {
-  x: number
-  y: number
-}
-
-const SOFT_CHART_PALETTE = [
-  {
-    recommendedFill: 'rgba(244, 184, 205, 0.9)',
-    recommendedBorder: '#DD8DB2',
-  },
-  {
-    recommendedFill: 'rgba(173, 216, 255, 0.92)',
-    recommendedBorder: '#60A5FA',
-  },
-  {
-    recommendedFill: 'rgba(187, 247, 208, 0.94)',
-    recommendedBorder: '#4ADE80',
-  },
-] as const
-
-const CURRENT_MOTOR_FILL = 'rgba(71, 85, 105, 0.9)'
-const CURRENT_MOTOR_BORDER = '#334155'
+const MOTOR_BORDER_COLORS = ['#67687D', '#05A070', '#050A99', '#EAB308']
+const WATERFALL_BAR_COLORS = [
+  'rgba(103, 104, 125, 0.94)',
+  'rgba(5, 160, 112, 0.94)',
+  'rgba(5, 10, 153, 0.92)',
+]
+const WATERFALL_BORDER_COLORS = ['#67687D', '#05A070', '#050A99']
 
 function formatNumber(value: number) {
-  return value.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+  return formatIndianNumber(value, { maximumFractionDigits: 0 })
 }
 
-function wrapMotorLabel(label: string, maxLineLength = 16) {
+function formatCurrency(value: number) {
+  return `INR ${formatNumber(value)}`
+}
+
+function wrapAxisLabel(label: string, maxLineLength = 16) {
   const words = label.split(/\s+/).filter(Boolean)
   const lines: string[] = []
   let currentLine = ''
@@ -99,63 +76,133 @@ function wrapMotorLabel(label: string, maxLineLength = 16) {
   return lines.slice(0, 3)
 }
 
-function buildChartRows(recommendations: MotorRecommendationCard[]): MotorChartRow[] {
-  return recommendations.map((recommendation) => {
-    const motorLabel = `${recommendation.make} ${recommendation.model}`.trim()
+function createValueLabelPlugin(
+  id: string,
+  formatter: (rawValue: unknown, dataIndex: number) => string
+): Plugin<'bar'> {
+  return {
+    id,
+    afterDatasetsDraw(chart) {
+      const dataset = chart.data.datasets[0]
+      const meta = chart.getDatasetMeta(0)
+      const { ctx } = chart
 
-    return {
-      motorLabel,
-      currentEnergy: recommendation.currentAnnualEnergy,
-      recommendedEnergy: recommendation.recommendedAnnualEnergy,
-      energySavings: recommendation.energySavings,
-      currentEmissions: recommendation.currentAnnualEmissions,
-      recommendedEmissions: recommendation.recommendedAnnualEmissions,
-      emissionSavings: recommendation.emissionSavings,
+      ctx.save()
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'bottom'
+      ctx.fillStyle = '#0F172A'
+      ctx.font = '600 11px "Manrope Variable", "Manrope", sans-serif'
+
+      meta.data.forEach((barElement, index) => {
+        const rawValue = dataset.data[index]
+        const label = formatter(rawValue, index)
+
+        if (!label) {
+          return
+        }
+
+        const properties = barElement.getProps(['x', 'y', 'base'], true) as {
+          x: number
+          y: number
+          base: number
+        }
+        const labelY = Math.min(properties.y, properties.base) - 8
+
+        ctx.fillText(label, properties.x, labelY)
+      })
+
+      ctx.restore()
+    },
+  }
+}
+
+const waterfallConnectorPlugin: Plugin<'bar'> = {
+  id: 'motor-waterfall-connectors',
+  afterDatasetsDraw(chart) {
+    const meta = chart.getDatasetMeta(0)
+    const bars = meta.data
+
+    if (bars.length < 3) {
+      return
     }
-  })
-}
 
-function buildAxisLabel(label: string, useCompactLayout: boolean) {
-  return wrapMotorLabel(label, useCompactLayout ? 12 : 16).slice(0, useCompactLayout ? 2 : 3)
-}
+    const { ctx } = chart
 
-function useCompactChartLayout() {
-  const [isCompact, setIsCompact] = useState(false)
+    ctx.save()
+    ctx.setLineDash([5, 4])
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.45)'
+    ctx.lineWidth = 1.5
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 640px)')
-    const syncViewport = () => setIsCompact(mediaQuery.matches)
-
-    syncViewport()
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', syncViewport)
-      return () => mediaQuery.removeEventListener('change', syncViewport)
+    const currentCostBar = bars[0].getProps(['x', 'y', 'width'], true) as {
+      x: number
+      y: number
+      width: number
+    }
+    const savingsBar = bars[1].getProps(['x', 'y', 'base', 'width'], true) as {
+      x: number
+      y: number
+      base: number
+      width: number
     }
 
-    mediaQuery.addListener(syncViewport)
-    return () => mediaQuery.removeListener(syncViewport)
-  }, [])
+    ctx.beginPath()
+    ctx.moveTo(currentCostBar.x + currentCostBar.width / 2, currentCostBar.y)
+    ctx.lineTo(savingsBar.x - savingsBar.width / 2, savingsBar.base)
+    ctx.stroke()
 
-  return isCompact
+    const recommendedCostBar = bars[2].getProps(['x', 'y', 'width'], true) as {
+      x: number
+      y: number
+      width: number
+    }
+
+    ctx.beginPath()
+    ctx.moveTo(savingsBar.x + savingsBar.width / 2, savingsBar.y)
+    ctx.lineTo(recommendedCostBar.x - recommendedCostBar.width / 2, recommendedCostBar.y)
+    ctx.stroke()
+
+    ctx.restore()
+  },
 }
 
-function ChartLegend({ items }: { items: ChartLegendEntry[] }) {
+function MotorLegendDot({ fill, border }: { fill: string; border: string }) {
   return (
-    <div className="flex flex-wrap gap-2 border-b border-border/70 pb-3 sm:gap-3">
-      {items.map((item) => (
-        <div
-          key={item.label}
-          className="neo-chip inline-flex max-w-full items-center gap-2 rounded-full bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-slate-600 sm:text-xs"
-        >
-          <span
-            aria-hidden="true"
-            className="h-2.5 w-2.5 shrink-0 rounded-full border"
-            style={{ backgroundColor: item.fill, borderColor: item.border }}
-          />
-          <span className="truncate">{item.label}</span>
+    <span
+      aria-hidden="true"
+      className="h-7 w-7 shrink-0 rounded-full border-[3px] shadow-[0_2px_10px_rgba(15,23,42,0.08)]"
+      style={{ backgroundColor: fill, borderColor: border }}
+    />
+  )
+}
+
+function MotorChartsLegend() {
+  return (
+    <div className="neo-panel rounded-2xl bg-card px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <MotorLegendDot fill={MOTOR_BAR_COLORS[0]} border={MOTOR_BORDER_COLORS[0]} />
+          <ArrowRight className="h-4 w-4 shrink-0 text-[#67687D]" />
+          <span className="text-sm font-semibold text-[#67687D] sm:text-base">
+            current motor
+          </span>
         </div>
-      ))}
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {MOTOR_BAR_COLORS.slice(1, 4).map((fill, index) => (
+              <MotorLegendDot
+                key={`motor-recommended-legend-${index}`}
+                fill={fill}
+                border={MOTOR_BORDER_COLORS[index + 1]}
+              />
+            ))}
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[#05A070]" />
+          <span className="text-sm font-semibold text-[#05A070] sm:text-base">
+            recommended motors
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -164,534 +211,324 @@ export function MotorRecommendationCharts({
   currentSystem,
   recommendations,
 }: MotorRecommendationChartsProps) {
-  const useCompactLayout = useCompactChartLayout()
-  const chartsRef = useRef<HTMLDivElement>(null)
-  const energyPlotRef = useRef<HTMLDivElement>(null)
-  const emissionPlotRef = useRef<HTMLDivElement>(null)
-  const energyChartRef = useRef<ChartJS<'bar'> | null>(null)
-  const emissionChartRef = useRef<ChartJS<'bar'> | null>(null)
-  const [activeEnergyIndex, setActiveEnergyIndex] = useState<number | null>(null)
-  const [activeEmissionIndex, setActiveEmissionIndex] = useState<number | null>(null)
-  const chartRows = useMemo(() => buildChartRows(recommendations), [recommendations])
-  const chartPalette = useMemo(
-    () =>
-      chartRows.map(
-        (_, index) => SOFT_CHART_PALETTE[index % SOFT_CHART_PALETTE.length]
-      ),
-    [chartRows]
-  )
-  const legendEntries = useMemo<ChartLegendEntry[]>(
-    () => [
-      {
-        label: 'Current Motor',
-        fill: CURRENT_MOTOR_FILL,
-        border: CURRENT_MOTOR_BORDER,
-      },
-      ...chartRows.map((row, index) => ({
-        label: row.motorLabel,
-        fill: chartPalette[index]?.recommendedFill ?? SOFT_CHART_PALETTE[0].recommendedFill,
-        border: chartPalette[index]?.recommendedBorder ?? SOFT_CHART_PALETTE[0].recommendedBorder,
-      })),
-    ],
-    [chartPalette, chartRows]
-  )
-
-  const energyData = useMemo<ChartData<'bar'>>(
-    () => ({
-      labels: chartRows.map((row) => buildAxisLabel(row.motorLabel, useCompactLayout)),
-      datasets: [
-        {
-          label: 'Current Motor',
-          data: chartRows.map((row) => row.currentEnergy),
-          backgroundColor: CURRENT_MOTOR_FILL,
-          borderColor: CURRENT_MOTOR_BORDER,
-          borderWidth: 1,
-          borderRadius: 0,
-          categoryPercentage: 0.72,
-          barPercentage: 1,
-          maxBarThickness: 28,
-        },
-        {
-          label: 'Recommended Motor',
-          data: chartRows.map((row) => row.recommendedEnergy),
-          backgroundColor: chartPalette.map((palette) => palette.recommendedFill),
-          borderColor: chartPalette.map((palette) => palette.recommendedBorder),
-          borderWidth: 1,
-          borderRadius: 0,
-          categoryPercentage: 0.72,
-          barPercentage: 1,
-          maxBarThickness: 28,
-        },
-      ],
-    }),
-    [chartPalette, chartRows, useCompactLayout]
-  )
-
-  const energyOptions = useMemo<ChartOptions<'bar'>>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      events: ['click', 'touchstart'],
-      layout: {
-        padding: {
-          bottom: useCompactLayout ? 4 : 0,
-        },
-      },
-      animation: {
-        duration: 900,
-        easing: 'easeOutQuart',
-      },
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.94)',
-          titleColor: '#F8FAFC',
-          bodyColor: '#E2E8F0',
-          padding: 12,
-          displayColors: true,
-          callbacks: {
-            title: (items) => {
-              const row = chartRows[items[0]?.dataIndex ?? 0]
-              return row?.motorLabel ?? ''
-            },
-            afterBody: (items) => {
-              const row = chartRows[items[0]?.dataIndex ?? 0]
-              return row ? [`Savings: ${formatNumber(row.energySavings)} kWh/year`] : []
-            },
-            label: (context) => {
-              const label =
-                context.dataset.label === 'Current Motor'
-                  ? 'Current Motor'
-                  : 'Recommended Motor'
-
-              return `${label}: ${formatNumber(Number(context.raw))} kWh/year`
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          border: {
-            display: false,
-          },
-          ticks: {
-            color: '#64748B',
-            font: {
-              family: 'Manrope Variable, sans-serif',
-              size: useCompactLayout ? 9 : 11,
-              weight: 600,
-            },
-            autoSkip: false,
-            maxRotation: 0,
-            minRotation: 0,
-            padding: useCompactLayout ? 6 : 8,
-          },
-        },
-        y: {
-          beginAtZero: true,
-          border: {
-            display: false,
-          },
-          grid: {
-            color: '#E2E8F0',
-            drawTicks: false,
-          },
-          ticks: {
-            color: '#64748B',
-            padding: 10,
-            callback: (value) => formatNumber(Number(value)),
-            font: {
-              family: 'Manrope Variable, sans-serif',
-              size: useCompactLayout ? 10 : 11,
-            },
-          },
-          title: {
-            display: true,
-            text: 'kWh/year',
-            color: '#64748B',
-            font: {
-              family: 'Manrope Variable, sans-serif',
-              size: useCompactLayout ? 11 : 12,
-              weight: 600,
-            },
-          },
-        },
-      },
-    }),
-    [chartRows, useCompactLayout]
-  )
-
-  const emissionData = useMemo<ChartData<'bar'>>(
-    () => ({
-      labels: chartRows.map((row) => buildAxisLabel(row.motorLabel, useCompactLayout)),
-      datasets: [
-        {
-          label: 'Current Motor',
-          data: chartRows.map((row) => row.currentEmissions),
-          backgroundColor: CURRENT_MOTOR_FILL,
-          borderColor: CURRENT_MOTOR_BORDER,
-          borderWidth: 1,
-          borderRadius: 0,
-          categoryPercentage: 0.72,
-          barPercentage: 1,
-          maxBarThickness: 28,
-        },
-        {
-          label: 'Recommended Motor',
-          data: chartRows.map((row) => row.recommendedEmissions),
-          backgroundColor: chartPalette.map((palette) => palette.recommendedFill),
-          borderColor: chartPalette.map((palette) => palette.recommendedBorder),
-          borderWidth: 1,
-          borderRadius: 0,
-          categoryPercentage: 0.72,
-          barPercentage: 1,
-          maxBarThickness: 28,
-        },
-      ],
-    }),
-    [chartPalette, chartRows, useCompactLayout]
-  )
-
-  const emissionOptions = useMemo<ChartOptions<'bar'>>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      events: ['click', 'touchstart'],
-      layout: {
-        padding: {
-          bottom: useCompactLayout ? 4 : 0,
-        },
-      },
-      animation: {
-        duration: 900,
-        easing: 'easeOutQuart',
-      },
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.94)',
-          titleColor: '#F8FAFC',
-          bodyColor: '#E2E8F0',
-          padding: 12,
-          callbacks: {
-            title: (items) => {
-              const row = chartRows[items[0]?.dataIndex ?? 0]
-              return row?.motorLabel ?? ''
-            },
-            afterBody: (items) => {
-              const row = chartRows[items[0]?.dataIndex ?? 0]
-              return row ? [`Reduction: ${formatNumber(row.emissionSavings)} kgCO2e/year`] : []
-            },
-            label: (context) => {
-              const label =
-                context.dataset.label === 'Current Motor'
-                  ? 'Current Motor'
-                  : 'Recommended Motor'
-
-              return `${label}: ${formatNumber(Number(context.raw))} kgCO2e/year`
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          border: {
-            display: false,
-          },
-          ticks: {
-            color: '#64748B',
-            font: {
-              family: 'Manrope Variable, sans-serif',
-              size: useCompactLayout ? 9 : 11,
-              weight: 600,
-            },
-            autoSkip: false,
-            maxRotation: 0,
-            minRotation: 0,
-            padding: useCompactLayout ? 6 : 8,
-          },
-        },
-        y: {
-          beginAtZero: true,
-          border: {
-            display: false,
-          },
-          grid: {
-            color: '#E2E8F0',
-            drawTicks: false,
-          },
-          ticks: {
-            color: '#64748B',
-            padding: 10,
-            callback: (value) => formatNumber(Number(value)),
-            font: {
-              family: 'Manrope Variable, sans-serif',
-              size: useCompactLayout ? 10 : 11,
-            },
-          },
-          title: {
-            display: true,
-            text: 'kgCO2e/year',
-            color: '#64748B',
-            font: {
-              family: 'Manrope Variable, sans-serif',
-              size: useCompactLayout ? 11 : 12,
-              weight: 600,
-            },
-          },
-        },
-      },
-    }),
-    [chartRows, useCompactLayout]
-  )
+  const [useCompactAxisLabels, setUseCompactAxisLabels] = useState(false)
 
   useEffect(() => {
-    const chart = energyChartRef.current
+    const mediaQuery = window.matchMedia('(max-width: 640px)')
 
-    if (!chart) {
-      return
+    const updateFromMediaQuery = () => {
+      setUseCompactAxisLabels(mediaQuery.matches)
     }
 
-    if (activeEnergyIndex === null) {
-      chart.setActiveElements([])
-
-      if (chart.tooltip) {
-        chart.tooltip.setActiveElements([], { x: 0, y: 0 })
-      }
-
-      chart.update()
-      return
-    }
-
-    if (!chartRows[activeEnergyIndex]) {
-      return
-    }
-
-    const activeBar =
-      chart.getDatasetMeta(1).data[activeEnergyIndex] ??
-      chart.getDatasetMeta(0).data[activeEnergyIndex]
-
-    if (!activeBar) {
-      return
-    }
-
-    const anchorPoint = {
-      x: (activeBar as unknown as ChartAnchorPoint).x,
-      y: (activeBar as unknown as ChartAnchorPoint).y,
-    }
-
-    if (typeof anchorPoint.x !== 'number' || typeof anchorPoint.y !== 'number' || !chart.tooltip) {
-      return
-    }
-
-    chart.setActiveElements([
-      { datasetIndex: 0, index: activeEnergyIndex },
-      { datasetIndex: 1, index: activeEnergyIndex },
-    ])
-    chart.tooltip.setActiveElements(
-      [
-        { datasetIndex: 0, index: activeEnergyIndex },
-        { datasetIndex: 1, index: activeEnergyIndex },
-      ],
-      anchorPoint
-    )
-    chart.update()
-  }, [activeEnergyIndex, chartRows])
-
-  useEffect(() => {
-    const chart = emissionChartRef.current
-
-    if (!chart) {
-      return
-    }
-
-    if (activeEmissionIndex === null) {
-      chart.setActiveElements([])
-
-      if (chart.tooltip) {
-        chart.tooltip.setActiveElements([], { x: 0, y: 0 })
-      }
-
-      chart.update()
-      return
-    }
-
-    if (!chartRows[activeEmissionIndex]) {
-      return
-    }
-
-    const activeBar =
-      chart.getDatasetMeta(1).data[activeEmissionIndex] ??
-      chart.getDatasetMeta(0).data[activeEmissionIndex]
-
-    if (!activeBar) {
-      return
-    }
-
-    const anchorPoint = {
-      x: (activeBar as unknown as ChartAnchorPoint).x,
-      y: (activeBar as unknown as ChartAnchorPoint).y,
-    }
-
-    if (typeof anchorPoint.x !== 'number' || typeof anchorPoint.y !== 'number' || !chart.tooltip) {
-      return
-    }
-
-    chart.setActiveElements([
-      { datasetIndex: 0, index: activeEmissionIndex },
-      { datasetIndex: 1, index: activeEmissionIndex },
-    ])
-    chart.tooltip.setActiveElements(
-      [
-        { datasetIndex: 0, index: activeEmissionIndex },
-        { datasetIndex: 1, index: activeEmissionIndex },
-      ],
-      anchorPoint
-    )
-    chart.update()
-  }, [activeEmissionIndex, chartRows])
-
-  useEffect(() => {
-    if (activeEnergyIndex === null && activeEmissionIndex === null) {
-      return
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null
-
-      if (!target) {
-        return
-      }
-
-      if (!chartsRef.current?.contains(target)) {
-        setActiveEnergyIndex(null)
-        setActiveEmissionIndex(null)
-        return
-      }
-
-      if (!energyPlotRef.current?.contains(target)) {
-        setActiveEnergyIndex(null)
-      }
-
-      if (!emissionPlotRef.current?.contains(target)) {
-        setActiveEmissionIndex(null)
-      }
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
+    updateFromMediaQuery()
+    mediaQuery.addEventListener('change', updateFromMediaQuery)
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
+      mediaQuery.removeEventListener('change', updateFromMediaQuery)
     }
-  }, [activeEmissionIndex, activeEnergyIndex])
+  }, [])
 
-  const pinTooltipAtClickedGroup = (
-    chart: ChartJS<'bar'>,
-    activeIndex: number | null,
-    callback: (index: number | null) => void,
-    event: unknown
-  ) => {
-    const activeBars = chart.getElementsAtEventForMode(
-      event as Event,
-      'index',
-      { intersect: false },
-      false
-    )
+  const energyRows = useMemo(
+    () => [
+      {
+        displayName: `${currentSystem.make} ${currentSystem.model}`.trim() || 'Current motor',
+        compactLabel: currentSystem.make?.trim() || currentSystem.model?.trim() || 'Current',
+        annualEnergy: currentSystem.annualEnergy,
+      },
+      ...recommendations.slice(0, 3).map((recommendation) => ({
+        displayName: `${recommendation.make} ${recommendation.model}`.trim(),
+        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'Recommended',
+        annualEnergy: recommendation.recommendedAnnualEnergy ?? 0,
+      })),
+    ],
+    [currentSystem.annualEnergy, currentSystem.make, currentSystem.model, recommendations]
+  )
 
-    if (!activeBars.length) {
-      callback(null)
-      return
-    }
+  const leadRecommendation = recommendations[0] ?? null
+  const currentAnnualCost = leadRecommendation?.currentAnnualCost ?? currentSystem.annualCost
+  const newAnnualCost =
+    leadRecommendation?.recommendedAnnualCost ??
+    Math.max(0, currentAnnualCost - (leadRecommendation?.costSavings ?? 0))
+  const annualCostSavings = Math.max(0, leadRecommendation?.costSavings ?? 0)
 
-    const clickedIndex = activeBars[0].index
-    callback(activeIndex === clickedIndex ? null : clickedIndex)
-  }
+  const energyChartData = useMemo<ChartData<'bar'>>(
+    () => ({
+      labels: energyRows.map((row) =>
+        wrapAxisLabel(
+          useCompactAxisLabels ? row.compactLabel : row.displayName,
+          useCompactAxisLabels ? 10 : 18
+        )
+      ),
+      datasets: [
+        {
+          label: 'Annual Energy',
+          data: energyRows.map((row) => row.annualEnergy),
+          backgroundColor: energyRows.map(
+            (_, index) => MOTOR_BAR_COLORS[index] ?? MOTOR_BAR_COLORS.at(-1)
+          ),
+          borderColor: energyRows.map(
+            (_, index) => MOTOR_BORDER_COLORS[index] ?? MOTOR_BORDER_COLORS.at(-1)
+          ),
+          borderWidth: 1,
+          borderRadius: 0,
+          categoryPercentage: 0.98,
+          barPercentage: 0.99,
+          maxBarThickness: 68,
+        },
+      ],
+    }),
+    [energyRows, useCompactAxisLabels]
+  )
+
+  const energyChartOptions = useMemo<ChartOptions<'bar'>>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 800,
+        easing: 'easeOutQuart',
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.94)',
+          titleColor: '#F8FAFC',
+          bodyColor: '#E2E8F0',
+          padding: 12,
+          callbacks: {
+            title: (items) => energyRows[items[0]?.dataIndex ?? 0]?.displayName ?? '',
+            label: (context) => `${formatNumber(Number(context.raw))} kWh/year`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            color: '#64748B',
+            font: {
+              family: 'Manrope Variable, sans-serif',
+              size: 10,
+              weight: 600,
+            },
+            autoSkip: false,
+            maxRotation: 0,
+            minRotation: 0,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          border: {
+            display: false,
+          },
+          grid: {
+            color: '#E2E8F0',
+            drawTicks: false,
+          },
+          ticks: {
+            color: '#64748B',
+            callback: (value) => formatNumber(Number(value)),
+            font: {
+              family: 'Manrope Variable, sans-serif',
+              size: 11,
+            },
+          },
+          title: {
+            display: true,
+            text: 'Annual Energy (kWh)',
+            color: '#64748B',
+            font: {
+              family: 'Manrope Variable, sans-serif',
+              size: 12,
+              weight: 600,
+            },
+          },
+        },
+      },
+    }),
+    [energyRows]
+  )
+
+  const energyValueLabelsPlugin = useMemo(
+    () => createValueLabelPlugin('motor-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
+    []
+  )
+
+  const waterfallChartData = useMemo<ChartData<'bar'>>(
+    () => ({
+      labels: ['Current Cost', 'Savings', 'Recommended Cost'],
+      datasets: [
+        {
+          label: 'Annual Cost',
+          data: [
+            [0, currentAnnualCost],
+            [newAnnualCost, currentAnnualCost],
+            [0, newAnnualCost],
+          ],
+          backgroundColor: WATERFALL_BAR_COLORS,
+          borderColor: WATERFALL_BORDER_COLORS,
+          borderWidth: 1,
+          borderRadius: 0,
+          categoryPercentage: 0.78,
+          barPercentage: 0.92,
+          maxBarThickness: 72,
+        },
+      ],
+    }),
+    [annualCostSavings, currentAnnualCost, newAnnualCost]
+  )
+
+  const waterfallChartOptions = useMemo<ChartOptions<'bar'>>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 900,
+        easing: 'easeOutQuart',
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.94)',
+          titleColor: '#F8FAFC',
+          bodyColor: '#E2E8F0',
+          padding: 12,
+          callbacks: {
+            label: (context) => {
+              const rawValue = context.raw
+
+              if (!Array.isArray(rawValue)) {
+                return formatCurrency(Number(rawValue))
+              }
+
+              const startValue = Number(rawValue[0])
+              const endValue = Number(rawValue[1])
+              const totalValue = Math.abs(endValue - startValue)
+
+              if (context.dataIndex === 1) {
+                return `Savings: INR ${formatNumber(totalValue)}`
+              }
+
+              return `${context.dataIndex === 0 ? 'Current Cost' : 'Recommended Cost'}: INR ${formatNumber(
+                Math.max(startValue, endValue)
+              )}`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            color: '#64748B',
+            font: {
+              family: 'Manrope Variable, sans-serif',
+              size: 11,
+              weight: 600,
+            },
+          },
+        },
+        y: {
+          beginAtZero: true,
+          border: {
+            display: false,
+          },
+          grid: {
+            color: '#E2E8F0',
+            drawTicks: false,
+          },
+          ticks: {
+            color: '#64748B',
+            callback: (value) => formatNumber(Number(value)),
+            font: {
+              family: 'Manrope Variable, sans-serif',
+              size: 11,
+            },
+          },
+          title: {
+            display: true,
+            text: 'Cost (INR/year)',
+            color: '#64748B',
+            font: {
+              family: 'Manrope Variable, sans-serif',
+              size: 12,
+              weight: 600,
+            },
+          },
+        },
+      },
+    }),
+    []
+  )
+
+  const waterfallValueLabelsPlugin = useMemo(
+    () =>
+      createValueLabelPlugin('motor-waterfall-labels', (rawValue) => {
+        if (!Array.isArray(rawValue)) {
+          return formatCurrency(Number(rawValue))
+        }
+
+        const totalValue = Math.abs(Number(rawValue[1]) - Number(rawValue[0]))
+        return `INR ${formatNumber(totalValue)}`
+      }),
+    []
+  )
 
   return (
-    <div ref={chartsRef} className="grid gap-6 xl:grid-cols-2">
-      <Card className="border-border/80">
-        <CardHeader>
-          <CardTitle>Energy Consumption Comparison Graph</CardTitle>
-          <CardDescription>
-            Before vs after motor upgrade for {currentSystem.make} {currentSystem.model}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ChartLegend items={legendEntries} />
-          <div ref={energyPlotRef} className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
-            <Bar
-              ref={energyChartRef}
-              data={energyData}
-              options={energyOptions}
-              onClick={(event) => {
-                const chart = energyChartRef.current
+    <div className="space-y-4">
+      <MotorChartsLegend />
 
-                if (!chart) {
-                  return
-                }
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="border-border/80">
+          <CardHeader>
+            <CardTitle>Energy Consumption Comparison Graph</CardTitle>
+            <CardDescription>
+              Current motor versus the recommended motor options.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
+              <Bar
+                data={energyChartData}
+                options={energyChartOptions}
+                plugins={[energyValueLabelsPlugin]}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-                pinTooltipAtClickedGroup(
-                  chart,
-                  activeEnergyIndex,
-                  setActiveEnergyIndex,
-                  event.nativeEvent
-                )
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/80">
-        <CardHeader>
-          <CardTitle>CO2 Emission Reduction Graph</CardTitle>
-          <CardDescription>
-            Current motor emissions versus the recommended motor options from the catalog.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ChartLegend items={legendEntries} />
-          <div ref={emissionPlotRef} className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
-            <Bar
-              ref={emissionChartRef}
-              data={emissionData}
-              options={emissionOptions}
-              onClick={(event) => {
-                const chart = emissionChartRef.current
-
-                if (!chart) {
-                  return
-                }
-
-                pinTooltipAtClickedGroup(
-                  chart,
-                  activeEmissionIndex,
-                  setActiveEmissionIndex,
-                  event.nativeEvent
-                )
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+        <Card className="border-border/80">
+          <CardHeader>
+            <CardTitle>Annual Motor Energy Cost Savings</CardTitle>
+            <CardDescription>
+              Waterfall view for the strongest recommended motor option.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
+              <Bar
+                data={waterfallChartData}
+                options={waterfallChartOptions}
+                plugins={[waterfallValueLabelsPlugin, waterfallConnectorPlugin]}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

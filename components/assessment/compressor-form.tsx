@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -985,9 +985,11 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Change Equipment
           </Button>
-          <Button type="submit" className="w-full gap-2 bg-[#065F46] text-white hover:bg-[#054f3a] sm:w-auto">
+          <Button
+            type="submit"
+            className="neo-cta w-full rounded-2xl text-sm font-medium tracking-[-0.01em] sm:w-auto"
+          >
             Generate Recommendations
-            <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </form>

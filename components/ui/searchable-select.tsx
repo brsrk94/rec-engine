@@ -88,7 +88,7 @@ function SearchableSelectComponent({
           role="combobox"
           disabled={disabled}
           className={cn(
-            'neo-field h-10 w-full justify-between rounded-xl bg-background px-3 text-left font-normal shadow-none transition-[transform,border-color,background-color,color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-background active:scale-100 sm:h-9',
+            'h-10 w-full justify-between rounded-2xl border border-border/70 bg-white px-3 text-left font-normal text-foreground shadow-none transition-[border-color,background-color,color,box-shadow] duration-200 hover:bg-white active:scale-100 sm:h-9',
             className
           )}
         >
@@ -98,7 +98,7 @@ function SearchableSelectComponent({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl border border-border/80 bg-white p-0 shadow-[0_24px_48px_-28px_rgba(15,23,42,0.28)]" align="start">
         <Command shouldFilter={false}>
           <CommandInput
             value={searchQuery}

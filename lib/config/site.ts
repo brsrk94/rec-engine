@@ -5,7 +5,7 @@ type SiteLink = {
 
 export const siteConfig = {
   name: 'Fitsol',
-  brandColor: '#065F46',
+  brandColor: '#05a070',
   navigationLinks: [] as SiteLink[],
 } as const
 

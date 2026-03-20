@@ -7,11 +7,6 @@ import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, RotateCcw } from 'lucide-react'
 
-import {
-  AssessmentEquipmentImage,
-  ASSESSMENT_EQUIPMENT_ASSETS,
-  type AssessmentEquipmentId,
-} from '@/components/assessment/equipment-image'
 import { CurrentSystemCard } from '@/components/assessment/results/current-system-card'
 import { RecommendationCard } from '@/components/assessment/results/recommendation-card'
 import { ResultsErrorState } from '@/components/assessment/results/results-error-state'
@@ -21,7 +16,6 @@ import type {
   AssessmentRecommendationCardSnapshot,
   MotorComparisonSnapshot,
 } from '@/components/assessment/results/types'
-import { StickyShellHeader } from '@/components/layout/sticky-shell-header'
 import {
   fadeUpVariants,
   staggerContainerVariants,
@@ -30,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useBLDCFanCatalog } from '@/hooks/use-bldc-fan-catalog'
 import { useCompressorCatalog } from '@/hooks/use-compressor-catalog'
+import { useLEDCatalog } from '@/hooks/use-led-catalog'
 import { useAssessmentStorage, type AssessmentData } from '@/hooks/use-assessment-storage'
 import { useMotorCatalog } from '@/hooks/use-motor-catalog'
 import { buildBLDCFanRecommendation } from '@/lib/assessment/bldc-fan-recommendation'
@@ -38,6 +33,7 @@ import {
   assessmentEquipmentMeta,
   type AssessmentEquipmentKey,
 } from '@/lib/assessment/equipment-meta'
+import { buildLEDRetrofitRecommendation } from '@/lib/assessment/led-retrofit-recommendation'
 import { buildMotorRecommendation, type MotorRecommendationResult } from '@/lib/motor-catalog'
 import { formatIndianNumber } from '@/lib/formatting'
 
@@ -82,6 +78,17 @@ const BLDCFanRecommendationCharts = dynamic(
   () =>
     import('@/components/assessment/bldc-fan-recommendation-charts').then(
       (module) => module.BLDCFanRecommendationCharts
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  }
+)
+
+const LEDRetrofitRecommendationCharts = dynamic(
+  () =>
+    import('@/components/assessment/led-retrofit-recommendation-charts').then(
+      (module) => module.LEDRetrofitRecommendationCharts
     ),
   {
     ssr: false,
@@ -163,7 +170,6 @@ export function ResultsView() {
 
   const rawEquipmentType = searchParams.get('type') || 'motor'
   const equipmentType = isKnownEquipmentType(rawEquipmentType) ? rawEquipmentType : 'motor'
-  const equipmentMeta = assessmentEquipmentMeta[equipmentType]
 
   const {
     catalog: motorCatalog,
@@ -188,6 +194,14 @@ export function ResultsView() {
     reload: reloadFanCatalog,
   } = useBLDCFanCatalog({
     enabled: isLoaded && equipmentType === 'bldc_fan',
+  })
+  const {
+    catalog: ledCatalog,
+    errorMessage: ledCatalogError,
+    isLoading: isLEDCatalogLoading,
+    reload: reloadLEDCatalog,
+  } = useLEDCatalog({
+    enabled: isLoaded && equipmentType === 'led_retrofit',
   })
 
   const recommendationResult = useMemo(() => {
@@ -219,8 +233,16 @@ export function ResultsView() {
       return buildBLDCFanRecommendation(data.bldc_fan, fanCatalog.fans)
     }
 
+    if (equipmentType === 'led_retrofit') {
+      if (!ledCatalog) {
+        return null
+      }
+
+      return buildLEDRetrofitRecommendation(data.led_retrofit, ledCatalog.bulbs)
+    }
+
     return buildFallbackResults(equipmentType, data)
-  }, [compressorCatalog, data, equipmentType, fanCatalog, isLoaded, motorCatalog])
+  }, [compressorCatalog, data, equipmentType, fanCatalog, isLoaded, ledCatalog, motorCatalog])
 
   if (equipmentType === 'motor' && motorCatalogError) {
     return (
@@ -258,11 +280,24 @@ export function ResultsView() {
     )
   }
 
+  if (equipmentType === 'led_retrofit' && ledCatalogError) {
+    return (
+      <ResultsErrorState
+        title="Unable to load LED recommendations"
+        description={ledCatalogError}
+        primaryActionLabel="Back to LED Retrofit Assessment"
+        onPrimaryAction={() => router.push('/assessment?type=led_retrofit')}
+        onRetry={reloadLEDCatalog}
+      />
+    )
+  }
+
   if (
     !isLoaded ||
     (equipmentType === 'motor' && isMotorCatalogLoading) ||
     (equipmentType === 'compressor' && isCompressorCatalogLoading) ||
     (equipmentType === 'bldc_fan' && isFanCatalogLoading) ||
+    (equipmentType === 'led_retrofit' && isLEDCatalogLoading) ||
     !recommendationResult
   ) {
     return <ResultsLoadingState />
@@ -272,7 +307,7 @@ export function ResultsView() {
     equipmentType === 'motor' ? (recommendationResult as MotorRecommendationResult) : null
   const isCompressorResults = equipmentType === 'compressor'
   const isBLDCFanResults = equipmentType === 'bldc_fan'
-  const usesFocusedResultsFlow = isCompressorResults || isBLDCFanResults
+  const isLEDRetrofitResults = equipmentType === 'led_retrofit'
 
   const startFreshAssessment = () => {
     clearAll()
@@ -286,74 +321,30 @@ export function ResultsView() {
       animate="visible"
       variants={staggerContainerVariants}
     >
-      <StickyShellHeader>
-        <div className="flex items-center gap-2">
+      <main className="mx-auto max-w-6xl px-3 py-8 sm:px-4 sm:py-10 md:px-6 md:py-14">
+        <motion.div
+          className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
+          variants={fadeUpVariants}
+        >
           <Link href={`/assessment?type=${equipmentType}`}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-2 px-2 text-white hover:bg-white/10 hover:text-white sm:h-[29px] sm:px-3"
-            >
+            <Button variant="outline" className="w-full gap-2 sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Edit Inputs</span>
+              Edit Inputs
             </Button>
           </Link>
-        </div>
-      </StickyShellHeader>
-
-      <main className="mx-auto max-w-6xl px-3 py-6 sm:px-4 sm:py-8 md:px-6 md:py-12">
-        <motion.div className="mb-6 sm:mb-8" variants={fadeUpVariants}>
-          <div className="flex items-start gap-2.5 sm:items-center sm:gap-3">
-            <AssessmentEquipmentImage
-              equipmentId={
-                (equipmentType in ASSESSMENT_EQUIPMENT_ASSETS
-                  ? equipmentType
-                  : 'motor') as AssessmentEquipmentId
-              }
-              className="h-10 w-10 rounded-xl sm:h-14 sm:w-14"
-              roundedClassName="rounded-xl"
-              sizes="(min-width: 640px) 56px, 40px"
-              priority
-            />
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold leading-tight sm:text-2xl md:text-3xl">
-                {equipmentMeta.title} Assessment Results
-              </h1>
-              <p className="text-sm text-muted-foreground sm:text-base">
-                Based on your equipment specifications
-              </p>
-            </div>
-          </div>
         </motion.div>
 
         <motion.div className="space-y-6" variants={staggerContainerVariants}>
-          {!usesFocusedResultsFlow ? (
-            <motion.div variants={staggerItemVariants}>
-              <ResultsSummaryGrid summary={recommendationResult.summary} />
-            </motion.div>
-          ) : null}
-
-          {motorResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <MotorRecommendationCharts
-                currentSystem={motorResults.currentSystem}
-                recommendations={motorResults.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
           <motion.div variants={staggerItemVariants}>
             <CurrentSystemCard currentSystem={recommendationResult.currentSystem} />
           </motion.div>
 
-          {usesFocusedResultsFlow ? (
-            <motion.div variants={staggerItemVariants}>
-              <ResultsSummaryGrid summary={recommendationResult.summary} />
-            </motion.div>
-          ) : null}
+          <motion.div variants={staggerItemVariants}>
+            <ResultsSummaryGrid summary={recommendationResult.summary} />
+          </motion.div>
 
           <motion.section aria-labelledby="recommended-upgrades-heading" variants={staggerItemVariants}>
-            <h2 id="recommended-upgrades-heading" className="mb-4 text-xl font-semibold">
+            <h2 id="recommended-upgrades-heading" className="mb-4 text-xl font-semibold text-primary">
               Recommended Upgrades
             </h2>
             <div className="space-y-4">
@@ -387,9 +378,27 @@ export function ResultsView() {
             </motion.div>
           ) : null}
 
+          {motorResults ? (
+            <motion.div variants={staggerItemVariants}>
+              <MotorRecommendationCharts
+                currentSystem={motorResults.currentSystem}
+                recommendations={motorResults.recommendations}
+              />
+            </motion.div>
+          ) : null}
+
           {isBLDCFanResults ? (
             <motion.div variants={staggerItemVariants}>
               <BLDCFanRecommendationCharts
+                currentSystem={recommendationResult.currentSystem}
+                recommendations={recommendationResult.recommendations}
+              />
+            </motion.div>
+          ) : null}
+
+          {isLEDRetrofitResults ? (
+            <motion.div variants={staggerItemVariants}>
+              <LEDRetrofitRecommendationCharts
                 currentSystem={recommendationResult.currentSystem}
                 recommendations={recommendationResult.recommendations}
               />

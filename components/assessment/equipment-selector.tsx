@@ -109,41 +109,45 @@ export function EquipmentSelector({ onSelect }: EquipmentSelectorProps) {
           <motion.div
             key={option.id}
             variants={staggerItemVariants}
-            whileHover={prefersReducedMotion ? undefined : { y: -2 }}
             transition={smoothTransition}
             className="h-full"
           >
             <Card
-              className="group flex h-full cursor-pointer flex-col border-border/70 bg-card transition-[transform,border-color,box-shadow] duration-300 ease-out hover:border-primary/35"
+              className="group flex h-full cursor-pointer flex-col rounded-3xl border-0 bg-white/95 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.22)] transition-colors duration-200 hover:bg-white"
               onClick={() => onSelect(option.id)}
             >
-              <CardHeader className="gap-4 pb-3">
+              <CardHeader className="gap-4 pb-2">
                 <div className="flex items-start gap-4">
-                  <div className="neo-chip flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/8 ring-1 ring-primary/10">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14">
                     <AssessmentEquipmentImage
                       equipmentId={option.id as AssessmentEquipmentId}
-                      className="h-9 w-9 rounded-lg border-0 bg-transparent"
-                      roundedClassName="rounded-lg"
-                      imageClassName="transition-transform duration-300 ease-out group-hover:scale-[1.04]"
-                      sizes="36px"
+                      className="h-10 w-10 rounded-none border-0 bg-transparent sm:h-11 sm:w-11"
+                      roundedClassName="rounded-none"
+                      imageClassName="transition-none"
+                      sizes="40px"
                       priority={option.id === 'motor'}
                     />
                   </div>
-                  <CardTitle className="flex min-w-0 flex-1 items-start justify-between gap-3 text-lg leading-snug">
-                    <span>{option.name}</span>
-                    <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-out group-hover:translate-x-0.5 group-hover:text-primary" />
-                  </CardTitle>
+                  <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg leading-snug text-foreground">
+                        {option.name}
+                      </CardTitle>
+                      <CardDescription className="mt-2 text-sm leading-6">
+                        {option.description}
+                      </CardDescription>
+                    </div>
+                    <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex-1">
-                <CardDescription>{option.description}</CardDescription>
-              </CardContent>
+              <CardContent className="hidden flex-1" />
             </Card>
           </motion.div>
         ))}
       </motion.div>
 
-      <motion.p variants={fadeUpVariants} className="neo-chip mx-auto w-fit rounded-full px-3 py-1 text-center text-xs leading-5 text-muted-foreground md:hidden">
+      <motion.p variants={fadeUpVariants} className="mx-auto w-fit rounded-full border border-border/70 bg-white/85 px-3 py-1 text-center text-xs leading-5 text-muted-foreground backdrop-blur-sm md:hidden">
         Choose the equipment from the dropdown above to continue.
       </motion.p>
     </motion.div>

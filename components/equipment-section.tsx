@@ -50,20 +50,22 @@ export function EquipmentSection() {
           {equipmentTypes.map((equipment) => (
             <div
               key={equipment.id}
-              className="flex h-full flex-col rounded-xl border-2 border-slate-900/10 bg-card p-4 shadow-[4px_4px_0_0_rgba(15,23,42,0.10)] sm:p-5"
+              className="neo-card homepage-card flex h-full items-start gap-4 rounded-[26px] p-5 sm:p-6"
             >
-                <div className="neo-chip mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 sm:h-12 sm:w-12">
-                  <AssessmentEquipmentImage
-                    equipmentId={equipment.id as AssessmentEquipmentId}
-                    className="h-9 w-9 border-0 shadow-none"
-                    roundedClassName="rounded-lg"
-                    sizes="36px"
-                    priority={equipment.id === 'motor'}
-                  />
-                </div>
-                <h3 className="mb-1.5 text-base font-semibold sm:text-lg">{equipment.name}</h3>
-                <span className="mt-auto text-sm font-medium text-primary">{equipment.savings}</span>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14">
+                <AssessmentEquipmentImage
+                  equipmentId={equipment.id as AssessmentEquipmentId}
+                  className="h-10 w-10 border-0 bg-transparent sm:h-12 sm:w-12"
+                  roundedClassName="rounded-lg"
+                  sizes="48px"
+                  priority={equipment.id === 'motor'}
+                />
               </div>
+              <div className="flex min-h-full flex-1 flex-col">
+                <h3 className="mb-1.5 text-base font-semibold text-[#05a070] sm:text-lg">{equipment.name}</h3>
+                <span className="mt-auto text-sm font-medium text-[#4d4f67]">{equipment.savings}</span>
+              </div>
+            </div>
           ))}
         </div>
       </div>

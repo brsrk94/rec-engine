@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarElement,
   CategoryScale,
@@ -30,15 +30,15 @@ interface CompressorRecommendationChartsProps {
 }
 
 const COMPRESSOR_BAR_COLORS = [
-  'rgba(71, 85, 105, 0.9)',
-  'rgba(244, 184, 205, 0.9)',
-  'rgba(173, 216, 255, 0.92)',
-  'rgba(187, 247, 208, 0.94)',
+  'rgba(103, 104, 125, 0.94)',
+  'rgba(5, 160, 112, 0.94)',
+  'rgba(5, 10, 153, 0.92)',
+  'rgba(234, 179, 8, 0.92)',
 ]
 
-const COMPRESSOR_BORDER_COLORS = ['#334155', '#DD8DB2', '#60A5FA', '#4ADE80']
-const WATERFALL_BAR_COLORS = ['rgba(71, 85, 105, 0.9)', 'rgba(187, 247, 208, 0.96)', 'rgba(173, 216, 255, 0.92)']
-const WATERFALL_BORDER_COLORS = ['#334155', '#16A34A', '#60A5FA']
+const COMPRESSOR_BORDER_COLORS = ['#67687D', '#05A070', '#050A99', '#EAB308']
+const WATERFALL_BAR_COLORS = ['rgba(103, 104, 125, 0.94)', 'rgba(5, 160, 112, 0.94)', 'rgba(5, 10, 153, 0.92)']
+const WATERFALL_BORDER_COLORS = ['#67687D', '#05A070', '#050A99']
 
 function formatNumber(value: number) {
   return formatIndianNumber(value, { maximumFractionDigits: 0 })
@@ -183,8 +183,8 @@ function CompressorChartsLegend() {
             fill={COMPRESSOR_BAR_COLORS[0]}
             border={COMPRESSOR_BORDER_COLORS[0]}
           />
-          <ArrowRight className="h-4 w-4 shrink-0 text-[#1666C5]" />
-          <span className="text-sm font-semibold text-[#1666C5] sm:text-base">
+          <ArrowRight className="h-4 w-4 shrink-0 text-[#67687D]" />
+          <span className="text-sm font-semibold text-[#67687D] sm:text-base">
             current compressor
           </span>
         </div>
@@ -193,14 +193,14 @@ function CompressorChartsLegend() {
           <div className="flex items-center gap-1.5">
             {COMPRESSOR_BAR_COLORS.slice(1, 4).map((fill, index) => (
               <CompressorLegendDot
-                key={COMPRESSOR_BORDER_COLORS[index + 1]}
+                key={`compressor-recommended-legend-${index}`}
                 fill={fill}
                 border={COMPRESSOR_BORDER_COLORS[index + 1]}
               />
             ))}
           </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-[#1666C5]" />
-          <span className="text-sm font-semibold text-[#1666C5] sm:text-base">
+          <ArrowRight className="h-4 w-4 shrink-0 text-[#05A070]" />
+          <span className="text-sm font-semibold text-[#05A070] sm:text-base">
             recommended compressors
           </span>
         </div>
@@ -213,14 +213,33 @@ export function CompressorRecommendationCharts({
   currentSystem,
   recommendations,
 }: CompressorRecommendationChartsProps) {
+  const [useCompactAxisLabels, setUseCompactAxisLabels] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 640px)')
+
+    const updateFromMediaQuery = () => {
+      setUseCompactAxisLabels(mediaQuery.matches)
+    }
+
+    updateFromMediaQuery()
+    mediaQuery.addEventListener('change', updateFromMediaQuery)
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateFromMediaQuery)
+    }
+  }, [])
+
   const energyRows = useMemo(
     () => [
       {
         displayName: `${currentSystem.make} ${currentSystem.model}`.trim(),
+        compactLabel: currentSystem.make?.trim() || currentSystem.model?.trim() || 'Current',
         annualEnergy: currentSystem.annualEnergy,
       },
       ...recommendations.slice(0, 3).map((recommendation) => ({
         displayName: `${recommendation.make} ${recommendation.model}`.trim(),
+        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'Recommended',
         annualEnergy: recommendation.recommendedAnnualEnergy ?? 0,
       })),
     ],
@@ -236,7 +255,9 @@ export function CompressorRecommendationCharts({
 
   const energyChartData = useMemo<ChartData<'bar'>>(
     () => ({
-      labels: energyRows.map((row) => wrapAxisLabel(row.displayName, 18)),
+      labels: energyRows.map((row) =>
+        wrapAxisLabel(useCompactAxisLabels ? row.compactLabel : row.displayName, useCompactAxisLabels ? 10 : 18)
+      ),
       datasets: [
         {
           label: 'Annual Energy',
@@ -255,7 +276,7 @@ export function CompressorRecommendationCharts({
         },
       ],
     }),
-    [energyRows]
+    [energyRows, useCompactAxisLabels]
   )
 
   const energyChartOptions = useMemo<ChartOptions<'bar'>>(

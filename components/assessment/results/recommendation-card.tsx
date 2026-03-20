@@ -65,10 +65,10 @@ function formatComparisonValue(value: number, unit: string, formatter: (value: n
 
 function MetricValue({ value, accentClassName, prefix, suffix }: MetricValueProps) {
   return (
-    <p className={`text-lg font-semibold ${accentClassName}`}>
-      {prefix ? <span className="mr-1 text-xs font-medium text-muted-foreground">{prefix}</span> : null}
+    <p className={`flex items-baseline gap-1 whitespace-nowrap text-lg font-semibold ${accentClassName}`}>
+      {prefix ? <span className="text-xs font-medium text-muted-foreground">{prefix}</span> : null}
       <span>{value}</span>
-      {suffix ? <span className="ml-1 text-xs font-medium text-muted-foreground">{suffix}</span> : null}
+      {suffix ? <span className="text-xs font-medium text-muted-foreground">{suffix}</span> : null}
     </p>
   )
 }
@@ -81,6 +81,8 @@ function getEstimatedInvestmentTooltip(equipmentType?: string) {
       return 'Calculated as the target compressor capex minus the discounted value of the current compressor.'
     case 'bldc_fan':
       return 'For BLDC fans, this is the BLDC fan capex per fan multiplied by the number of fans being replaced. Installation costs are used in MAC, not here.'
+    case 'led_retrofit':
+      return 'For LED retrofit, this is the LED capex per LED multiplied by the number of bulbs being replaced.'
     default:
       return 'This is the capital investment value used for the recommendation.'
   }
@@ -131,43 +133,63 @@ export function RecommendationCard({
 }: RecommendationCardProps) {
   const estimatedInvestmentTooltip = getEstimatedInvestmentTooltip(equipmentType)
   const marginalAbatementCostTooltip = getMarginalAbatementCostTooltip()
+  const isTopRecommendation = recommendation.badge === 'Top Recommendation'
 
   return (
-    <Card className="overflow-hidden border-primary/30">
+    <Card className="gap-0 overflow-hidden border-border/70 bg-white/94 py-0">
       <div className="flex flex-col lg:flex-row">
         <div className="flex-1 p-4 sm:p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="brand-gradient-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14">
+                <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7" />
+              </div>
+              <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Badge className="bg-primary text-primary-foreground">{recommendation.badge}</Badge>
+                <Badge
+                  className={cn(
+                    isTopRecommendation
+                      ? 'bg-[#05a070] text-white'
+                      : 'bg-[#05a070] text-white'
+                  )}
+                >
+                  {recommendation.badge}
+                </Badge>
                 {motorComparison?.efficiencyClass ? (
-                  <Badge variant="outline">{motorComparison.efficiencyClass}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-transparent bg-[#05a070] text-white"
+                  >
+                    {motorComparison.efficiencyClass}
+                  </Badge>
                 ) : null}
               </div>
-              <h3 className="text-lg font-bold text-foreground sm:text-xl">{recommendation.name}</h3>
-              <p className="break-words text-sm font-semibold text-foreground/90 sm:text-base">
-                {recommendation.make} - {recommendation.model}
-              </p>
-              {recommendation.details ? (
-                <p className="mt-1 break-words text-sm font-semibold text-foreground/80">
-                  {recommendation.details}
+                <h3 className="truncate text-lg font-bold text-primary sm:text-xl">
+                  {recommendation.name}
+                </h3>
+                <p className="truncate text-sm font-semibold text-primary sm:text-base">
+                  {recommendation.make} - {recommendation.model}
                 </p>
+              {recommendation.details ? (
+                  <p className="mt-1 truncate text-sm text-muted-foreground">
+                    {recommendation.details}
+                  </p>
               ) : null}
+              </div>
             </div>
-            <CheckCircle2 className="h-7 w-7 shrink-0 text-primary sm:h-8 sm:w-8" />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
-              <p className="text-sm text-muted-foreground">Energy Savings</p>
+            <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
+              <p className="whitespace-nowrap text-sm text-muted-foreground">Energy Savings</p>
               <MetricValue
                 value={formatMetricValue(recommendation.energySavings)}
                 accentClassName="text-primary"
                 suffix="kWh/yr"
               />
             </div>
-            <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
-              <p className="text-sm text-muted-foreground">Energy Cost Savings</p>
+            <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
+              <p className="whitespace-nowrap text-sm text-muted-foreground">Energy Cost Savings</p>
               <MetricValue
                 value={formatMetricValue(recommendation.costSavings)}
                 accentClassName="text-green-600"
@@ -175,8 +197,8 @@ export function RecommendationCard({
                 suffix="/yr"
               />
             </div>
-            <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
-              <p className="text-sm text-muted-foreground">CO2 Reduction</p>
+            <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
+              <p className="whitespace-nowrap text-sm text-muted-foreground">CO2 Reduction</p>
               <MetricValue
                 value={formatMetricValue(recommendation.emissionSavings)}
                 accentClassName="text-emerald-600"
@@ -184,7 +206,7 @@ export function RecommendationCard({
               />
             </div>
             {motorComparison ? (
-              <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
+              <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
                 <MetricLabelWithTooltip
                   label="Marginal Abatement Cost"
                   tooltip={marginalAbatementCostTooltip}
@@ -195,7 +217,7 @@ export function RecommendationCard({
                 <p className="text-xs text-muted-foreground">INR/kgCO2e</p>
               </div>
             ) : recommendation.marginalAbatementCost ? (
-              <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
+              <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
                 <MetricLabelWithTooltip
                   label="Marginal Abatement Cost"
                   tooltip={marginalAbatementCostTooltip}
@@ -206,7 +228,7 @@ export function RecommendationCard({
                 <p className="text-xs text-muted-foreground">INR/kgCO2e</p>
               </div>
             ) : (
-              <div className="neo-chip rounded-2xl bg-secondary/50 p-3">
+              <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
                 <p className="text-sm text-muted-foreground">Efficiency</p>
                 <div className="flex items-center gap-2">
                   <Progress value={Math.min(recommendation.efficiency, 100)} className="h-2 flex-1" />
@@ -219,12 +241,12 @@ export function RecommendationCard({
           {motorComparison ? (
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               {comparisonPanels.map((panel) => (
-                <div key={panel.key} className="neo-card rounded-xl bg-background p-4">
+                <div key={panel.key} className="rounded-2xl border border-border/70 bg-background/80 p-4">
                   <p className="text-sm font-medium text-foreground">{panel.title}</p>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Current</span>
-                      <span className="font-medium">
+                      <span className="shrink-0 text-muted-foreground">Current</span>
+                      <span className="truncate whitespace-nowrap text-right font-medium">
                         {formatComparisonValue(
                           motorComparison[panel.currentKey],
                           panel.unit,
@@ -233,8 +255,8 @@ export function RecommendationCard({
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Recommended</span>
-                      <span className="font-medium">
+                      <span className="shrink-0 font-medium text-primary">Recommended</span>
+                      <span className="truncate whitespace-nowrap text-right font-medium">
                         {formatComparisonValue(
                           motorComparison[panel.targetKey],
                           panel.unit,
@@ -242,9 +264,9 @@ export function RecommendationCard({
                         )}
                       </span>
                     </div>
-                    <div className="neo-chip flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">
-                      <span>{panel.savingsLabel}</span>
-                      <span className="font-semibold">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-emerald-800">
+                      <span className="shrink-0">{panel.savingsLabel}</span>
+                      <span className="truncate whitespace-nowrap text-right font-semibold">
                         {formatComparisonValue(
                           motorComparison[panel.savingsKey],
                           panel.unit,
@@ -260,7 +282,7 @@ export function RecommendationCard({
         </div>
 
         {!hideFinancialSidebar ? (
-          <div className="flex flex-col justify-center gap-4 border-t bg-secondary/30 p-4 sm:p-6 lg:w-64 lg:border-l lg:border-t-0">
+          <div className="brand-surface flex flex-col justify-center  border-t border-border/70 bg-secondary/30 p-4 sm:p-6 lg:w-64 lg:border-l lg:border-t-0">
             <div className="text-center">
               <MetricLabelWithTooltip
                 label="Estimated Investment"

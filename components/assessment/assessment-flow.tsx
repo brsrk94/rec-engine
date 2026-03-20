@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { ArrowLeft } from 'lucide-react'
 import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
-import { AssessmentHeader } from './assessment-header'
+import { Button } from '@/components/ui/button'
 import { EquipmentSelector } from './equipment-selector'
 import { MotorForm } from './motor-form'
 import { CompressorForm } from './compressor-form'
@@ -81,9 +83,21 @@ export function AssessmentFlow() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AssessmentHeader />
-      
-      <main className="mx-auto max-w-5xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-12">
+      <main className="mx-auto max-w-6xl px-3 py-8 sm:px-4 sm:py-10 md:px-6 md:py-14">
+        <motion.div
+          className="mb-5 flex sm:mb-6"
+          initial={prefersReducedMotion ? false : 'hidden'}
+          animate="visible"
+          variants={fadeUpVariants}
+        >
+          <Link href="/">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
+        </motion.div>
+
         <AnimatePresence mode="wait" initial={!prefersReducedMotion}>
           <motion.div
             key={`${currentStep}-${data.selectedEquipment ?? 'none'}`}
