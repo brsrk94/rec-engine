@@ -118,10 +118,17 @@ export function getCompressorLeastCapexPerKw(type: string) {
 
 export function getDefaultCompressorCapex(
   type: string,
-  _rating: string | number,
-  _unit: 'kW' | 'HP'
+  rating: string | number,
+  unit: 'kW' | 'HP'
 ) {
-  return getCompressorLeastCapexPerKw(type)
+  const ratingKw = normalizeCompressorRatingToKw(rating, unit)
+  const benchmarkCapexPerKw = getCompressorLeastCapexPerKw(type)
+
+  if (!ratingKw || !benchmarkCapexPerKw) {
+    return 0
+  }
+
+  return ratingKw * benchmarkCapexPerKw
 }
 
 export function getSuggestedTargetCompressorType(currentType: string) {

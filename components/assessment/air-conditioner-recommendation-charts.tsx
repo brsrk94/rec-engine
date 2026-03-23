@@ -8,9 +8,9 @@ import {
   Legend,
   LinearScale,
   Tooltip,
-  type Plugin,
   type ChartData,
   type ChartOptions,
+  type Plugin,
 } from 'chart.js'
 import { ArrowRight } from 'lucide-react'
 import { Bar } from 'react-chartjs-2'
@@ -24,19 +24,19 @@ import { formatIndianNumber } from '@/lib/formatting'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
-interface CompressorRecommendationChartsProps {
+interface AirConditionerRecommendationChartsProps {
   currentSystem: AssessmentCurrentSystemSnapshot
   recommendations: AssessmentRecommendationCardSnapshot[]
 }
 
-const COMPRESSOR_BAR_COLORS = [
+const AC_BAR_COLORS = [
   'rgba(103, 104, 125, 0.94)',
   'rgba(5, 160, 112, 0.94)',
   'rgba(5, 10, 153, 0.92)',
-  'rgba(234, 179, 8, 0.92)',
+  'rgba(234, 179, 8, 0.94)',
 ]
 
-const COMPRESSOR_BORDER_COLORS = ['#67687D', '#05A070', '#050A99', '#EAB308']
+const AC_BORDER_COLORS = ['#67687D', '#05A070', '#050A99', '#EAB308']
 const WATERFALL_BAR_COLORS = ['rgba(103, 104, 125, 0.94)', 'rgba(5, 160, 112, 0.94)', 'rgba(5, 10, 153, 0.92)']
 const WATERFALL_BORDER_COLORS = ['#67687D', '#05A070', '#050A99']
 
@@ -84,10 +84,12 @@ function createValueLabelPlugin(
     afterDatasetsDraw(chart) {
       const dataset = chart.data.datasets[0]
       const meta = chart.getDatasetMeta(0)
-      const { ctx, chartArea } = chart
+      const { ctx } = chart
 
       ctx.save()
       ctx.textAlign = 'center'
+      ctx.textBaseline = 'bottom'
+      ctx.fillStyle = '#0F172A'
       ctx.font = '600 11px "Manrope Variable", "Manrope", sans-serif'
 
       meta.data.forEach((barElement, index) => {
@@ -103,16 +105,8 @@ function createValueLabelPlugin(
           y: number
           base: number
         }
-        const top = Math.min(properties.y, properties.base)
-        const bottom = Math.max(properties.y, properties.base)
-        const barHeight = Math.max(0, bottom - top)
-        const shouldCenterLabel = barHeight < 28
-        const labelY = shouldCenterLabel
-          ? Math.min(chartArea.bottom - 8, Math.max(chartArea.top + 8, top + barHeight / 2))
-          : Math.min(chartArea.bottom - 8, Math.max(chartArea.top + 6, top + 6))
+        const labelY = Math.min(properties.y, properties.base) - 8
 
-        ctx.textBaseline = shouldCenterLabel ? 'middle' : 'top'
-        ctx.fillStyle = '#FFFFFF'
         ctx.fillText(label, properties.x, labelY)
       })
 
@@ -122,7 +116,7 @@ function createValueLabelPlugin(
 }
 
 const waterfallConnectorPlugin: Plugin<'bar'> = {
-  id: 'waterfall-connectors',
+  id: 'ac-waterfall-connectors',
   afterDatasetsDraw(chart) {
     const meta = chart.getDatasetMeta(0)
     const bars = meta.data
@@ -170,7 +164,7 @@ const waterfallConnectorPlugin: Plugin<'bar'> = {
   },
 }
 
-function CompressorLegendDot({ fill, border }: { fill: string; border: string }) {
+function LegendDot({ fill, border }: { fill: string; border: string }) {
   return (
     <span
       aria-hidden="true"
@@ -180,34 +174,31 @@ function CompressorLegendDot({ fill, border }: { fill: string; border: string })
   )
 }
 
-function CompressorChartsLegend() {
+function AirConditionerChartsLegend() {
   return (
     <div className="neo-panel rounded-2xl bg-card px-4 py-4 sm:px-5">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <CompressorLegendDot
-            fill={COMPRESSOR_BAR_COLORS[0]}
-            border={COMPRESSOR_BORDER_COLORS[0]}
-          />
+          <LegendDot fill={AC_BAR_COLORS[0]} border={AC_BORDER_COLORS[0]} />
           <ArrowRight className="h-4 w-4 shrink-0 text-[#67687D]" />
           <span className="text-sm font-semibold text-[#67687D] sm:text-base">
-            current compressor
+            current AC system
           </span>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            {COMPRESSOR_BAR_COLORS.slice(1, 4).map((fill, index) => (
-              <CompressorLegendDot
-                key={`compressor-recommended-legend-${index}`}
+            {AC_BAR_COLORS.slice(1, 4).map((fill, index) => (
+              <LegendDot
+                key={`ac-recommended-legend-${index}`}
                 fill={fill}
-                border={COMPRESSOR_BORDER_COLORS[index + 1]}
+                border={AC_BORDER_COLORS[index + 1]}
               />
             ))}
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-[#05A070]" />
           <span className="text-sm font-semibold text-[#05A070] sm:text-base">
-            recommended compressors
+            recommended AC upgrades
           </span>
         </div>
       </div>
@@ -215,10 +206,10 @@ function CompressorChartsLegend() {
   )
 }
 
-export function CompressorRecommendationCharts({
+export function AirConditionerRecommendationCharts({
   currentSystem,
   recommendations,
-}: CompressorRecommendationChartsProps) {
+}: AirConditionerRecommendationChartsProps) {
   const [useCompactAxisLabels, setUseCompactAxisLabels] = useState(false)
 
   useEffect(() => {
@@ -239,13 +230,13 @@ export function CompressorRecommendationCharts({
   const energyRows = useMemo(
     () => [
       {
-        displayName: `${currentSystem.make} ${currentSystem.model}`.trim(),
+        displayName: currentSystem.model?.trim() || 'Current AC system',
         compactLabel: currentSystem.make?.trim() || currentSystem.model?.trim() || 'Current',
         annualEnergy: currentSystem.annualEnergy,
       },
       ...recommendations.slice(0, 3).map((recommendation) => ({
         displayName: `${recommendation.make} ${recommendation.model}`.trim(),
-        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'Recommended',
+        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'Upgrade',
         annualEnergy: recommendation.recommendedAnnualEnergy ?? 0,
       })),
     ],
@@ -254,26 +245,24 @@ export function CompressorRecommendationCharts({
 
   const leadRecommendation = recommendations[0] ?? null
   const currentAnnualCost = leadRecommendation?.currentAnnualCost ?? currentSystem.annualCost
-  const newAnnualCost =
+  const recommendedAnnualCost =
     leadRecommendation?.recommendedAnnualCost ??
     Math.max(0, currentAnnualCost - (leadRecommendation?.costSavings ?? 0))
-  const energySavingsCost = Math.max(0, leadRecommendation?.costSavings ?? 0)
 
   const energyChartData = useMemo<ChartData<'bar'>>(
     () => ({
       labels: energyRows.map((row) =>
-        wrapAxisLabel(useCompactAxisLabels ? row.compactLabel : row.displayName, useCompactAxisLabels ? 10 : 18)
+        wrapAxisLabel(
+          useCompactAxisLabels ? row.compactLabel : row.displayName,
+          useCompactAxisLabels ? 10 : 18
+        )
       ),
       datasets: [
         {
           label: 'Annual Energy',
           data: energyRows.map((row) => row.annualEnergy),
-          backgroundColor: energyRows.map(
-            (_, index) => COMPRESSOR_BAR_COLORS[index] ?? COMPRESSOR_BAR_COLORS.at(-1)
-          ),
-          borderColor: energyRows.map(
-            (_, index) => COMPRESSOR_BORDER_COLORS[index] ?? COMPRESSOR_BORDER_COLORS.at(-1)
-          ),
+          backgroundColor: energyRows.map((_, index) => AC_BAR_COLORS[index] ?? AC_BAR_COLORS.at(-1)),
+          borderColor: energyRows.map((_, index) => AC_BORDER_COLORS[index] ?? AC_BORDER_COLORS.at(-1)),
           borderWidth: 1,
           borderRadius: 0,
           categoryPercentage: 0.98,
@@ -362,7 +351,7 @@ export function CompressorRecommendationCharts({
   )
 
   const energyValueLabelsPlugin = useMemo(
-    () => createValueLabelPlugin('compressor-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
+    () => createValueLabelPlugin('ac-energy-labels', (rawValue) => `${formatNumber(Number(rawValue))}`),
     []
   )
 
@@ -374,8 +363,8 @@ export function CompressorRecommendationCharts({
           label: 'Annual Cost',
           data: [
             [0, currentAnnualCost],
-            [newAnnualCost, currentAnnualCost],
-            [0, newAnnualCost],
+            [recommendedAnnualCost, currentAnnualCost],
+            [0, recommendedAnnualCost],
           ],
           backgroundColor: WATERFALL_BAR_COLORS,
           borderColor: WATERFALL_BORDER_COLORS,
@@ -387,7 +376,7 @@ export function CompressorRecommendationCharts({
         },
       ],
     }),
-    [currentAnnualCost, energySavingsCost, newAnnualCost]
+    [currentAnnualCost, recommendedAnnualCost]
   )
 
   const waterfallChartOptions = useMemo<ChartOptions<'bar'>>(
@@ -482,17 +471,12 @@ export function CompressorRecommendationCharts({
 
   const waterfallValueLabelsPlugin = useMemo(
     () =>
-      createValueLabelPlugin('compressor-waterfall-labels', (rawValue, index) => {
+      createValueLabelPlugin('ac-waterfall-labels', (rawValue) => {
         if (!Array.isArray(rawValue)) {
           return formatCurrency(Number(rawValue))
         }
 
         const totalValue = Math.abs(Number(rawValue[1]) - Number(rawValue[0]))
-
-        if (index === 1) {
-          return `INR ${formatNumber(totalValue)}`
-        }
-
         return `INR ${formatNumber(totalValue)}`
       }),
     []
@@ -500,17 +484,17 @@ export function CompressorRecommendationCharts({
 
   return (
     <div className="space-y-4">
-      <CompressorChartsLegend />
+      <AirConditionerChartsLegend />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="border-border/80">
-        <CardHeader>
-          <CardTitle>Energy Consumption Comparison Graph</CardTitle>
+          <CardHeader>
+            <CardTitle>Energy Consumption Comparison Graph</CardTitle>
             <CardDescription>
-              Current compressor versus the recommended compressor options.
+              Current AC system versus the recommended high-efficiency upgrades.
             </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </CardHeader>
+          <CardContent>
             <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
               <Bar
                 data={energyChartData}
@@ -523,12 +507,12 @@ export function CompressorRecommendationCharts({
 
         <Card className="border-border/80">
           <CardHeader>
-            <CardTitle>Annual Compressor Energy Cost Savings</CardTitle>
+            <CardTitle>Annual AC Energy Cost Savings</CardTitle>
             <CardDescription>
-              Waterfall view for the strongest recommended compressor option.
+              Waterfall view for the strongest recommended AC upgrade option.
             </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </CardHeader>
+          <CardContent>
             <div className="neo-chart-stage h-[320px] rounded-[22px] p-3 sm:h-[360px] sm:p-4">
               <Bar
                 data={waterfallChartData}

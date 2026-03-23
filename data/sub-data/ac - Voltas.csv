@@ -1,0 +1,94 @@
+Brand,Model,capacity_Ton,power_consumption_kW,Refrigerant type,cooling capacity,voltage,current,star rating,inverter/noninverter
+Voltas,123V CZT,1,~0.95,R32,~3.5 kW,230 V,~4.5 A,3 Star,Inverter
+Voltas,125V CZT,1,~0.90,R32,~3.5 kW,230 V,~4.2 A,5 Star,Inverter
+Voltas,183V CZT,1.5,~1.35,R32,~5.0 kW,230 V,~6.0 A,3 Star,Inverter
+Voltas,185V CZT,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,5 Star,Inverter
+Voltas,243V CZT,2,~1.90,R32,~6.2 kW,230 V,~8.2 A,3 Star,Inverter
+Voltas,245V CZT,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,5 Star,Inverter
+Voltas,183V Vectra,1.5,~1.40,R32,~5.2 kW,230 V,~6.2 A,4 Star,Inverter
+Voltas,185V Vectra,1.5,~1.32,R32,~5.0 kW,230 V,~5.9 A,5 Star,Inverter
+Voltas,243V Vectra,2,~2.00,R32,~6.5 kW,230 V,~8.5 A,4 Star,Inverter
+Voltas,245V Vectra,2,~1.90,R32,~6.2 kW,230 V,~8.2 A,5 Star,Inverter
+Voltas,183C EZT,1.5,~1.60,R410A,~5.0 kW,230 V,~7.0 A,3 Star,Non-Inverter
+Voltas,185C EZT,1.5,~1.55,R410A,~5.0 kW,230 V,~6.8 A,5 Star,Non-Inverter
+Voltas,243C EZT,2,~2.10,R410A,~6.2 kW,230 V,~9.0 A,3 Star,Non-Inverter
+Voltas,245C EZT,2,~2.05,R410A,~6.2 kW,230 V,~8.8 A,5 Star,Non-Inverter
+Voltas,183V Adjustable,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,3 Star,Inverter
+Voltas,185V Adjustable,1.5,~1.25,R32,~5.0 kW,230 V,~5.6 A,5 Star,Inverter
+Voltas,243V Adjustable,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,3 Star,Inverter
+Voltas,245V Adjustable,2,~1.80,R32,~6.2 kW,230 V,~7.8 A,5 Star,Inverter
+Voltas,183V AllWeather,1.5,~1.35,R32,~5.0 kW,230 V,~6.0 A,3 Star,Inverter
+Voltas,185V AllWeather,1.5,~1.28,R32,~5.0 kW,230 V,~5.7 A,5 Star,Inverter
+Voltas,243V AllWeather,2,~1.95,R32,~6.2 kW,230 V,~8.3 A,3 Star,Inverter
+Voltas,245V AllWeather,2,~1.88,R32,~6.2 kW,230 V,~8.1 A,5 Star,Inverter
+Voltas,123 LZF,1,~1.10,R410A,~3.5 kW,230 V,~5.0 A,3 Star,Non-Inverter
+Voltas,125 LZF,1,~1.05,R32,~3.5 kW,230 V,~4.8 A,5 Star,Non-Inverter
+Voltas,183 LZF,1.5,~1.60,R410A,~5.0 kW,230 V,~7.0 A,3 Star,Non-Inverter
+Voltas,185 LZF,1.5,~1.55,R32,~5.0 kW,230 V,~6.8 A,5 Star,Non-Inverter
+Voltas,243 LZF,2,~2.10,R410A,~6.2 kW,230 V,~9.0 A,3 Star,Non-Inverter
+Voltas,245 LZF,2,~2.05,R32,~6.2 kW,230 V,~8.8 A,5 Star,Non-Inverter
+Voltas,CASSETTE 24V,2,~2.20,R410A,~6.5 kW,230 V,~9.5 A,3 Star,Non-Inverter
+Voltas,CASSETTE 36V,3,~3.30,R410A,~9.0 kW,230 V,~14.0 A,3 Star,Non-Inverter
+Voltas,CASSETTE 48V,4,~4.50,R410A,~12.5 kW,230 V,~18.5 A,3 Star,Non-Inverter
+Voltas,INVERTER CASSETTE 24V,2,~2.00,R32,~6.5 kW,230 V,~8.8 A,4 Star,Inverter
+Voltas,INVERTER CASSETTE 36V,3,~3.10,R32,~9.0 kW,230 V,~13.2 A,4 Star,Inverter
+Voltas,123V Vectra Elite,1,~0.90,R32,~3.5 kW,230 V,~4.2 A,5 Star,Inverter
+Voltas,125V Vectra Elite,1,~0.88,R32,~3.5 kW,230 V,~4.1 A,5 Star,Inverter
+Voltas,183V Vectra Elite,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,5 Star,Inverter
+Voltas,185V Vectra Elite,1.5,~1.25,R32,~5.0 kW,230 V,~5.6 A,5 Star,Inverter
+Voltas,243V Vectra Elite,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,5 Star,Inverter
+Voltas,245V Vectra Elite,2,~1.80,R32,~6.2 kW,230 V,~7.8 A,5 Star,Inverter
+Voltas,183V Deluxe,1.5,~1.35,R32,~5.0 kW,230 V,~6.0 A,4 Star,Inverter
+Voltas,185V Deluxe,1.5,~1.28,R32,~5.0 kW,230 V,~5.7 A,5 Star,Inverter
+Voltas,243V Deluxe,2,~1.90,R32,~6.2 kW,230 V,~8.2 A,4 Star,Inverter
+Voltas,245V Deluxe,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,5 Star,Inverter
+Voltas,123C EZT,1,~1.10,R410A,~3.5 kW,230 V,~5.0 A,3 Star,Non-Inverter
+Voltas,125C EZT,1,~1.05,R410A,~3.5 kW,230 V,~4.8 A,5 Star,Non-Inverter
+Voltas,183C Deluxe,1.5,~1.60,R410A,~5.0 kW,230 V,~7.0 A,3 Star,Non-Inverter
+Voltas,185C Deluxe,1.5,~1.55,R410A,~5.0 kW,230 V,~6.8 A,5 Star,Non-Inverter
+Voltas,243C Deluxe,2,~2.10,R410A,~6.2 kW,230 V,~9.0 A,3 Star,Non-Inverter
+Voltas,245C Deluxe,2,~2.05,R410A,~6.2 kW,230 V,~8.8 A,5 Star,Non-Inverter
+Voltas,123V Adjustable Elite,1,~0.88,R32,~3.5 kW,230 V,~4.1 A,5 Star,Inverter
+Voltas,183V Adjustable Elite,1.5,~1.25,R32,~5.0 kW,230 V,~5.6 A,5 Star,Inverter
+Voltas,243V Adjustable Elite,2,~1.80,R32,~6.2 kW,230 V,~7.8 A,5 Star,Inverter
+Voltas,183V Smart Adjustable,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,4 Star,Inverter
+Voltas,243V Smart Adjustable,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,4 Star,Inverter
+Voltas,DUCTABLE 5TR,5,~5.50,R410A,~15.0 kW,230 V,~22.0 A,3 Star,Non-Inverter
+Voltas,DUCTABLE 6TR,6,~6.50,R410A,~18.0 kW,230 V,~26.0 A,3 Star,Non-Inverter
+Voltas,DUCTABLE 8TR,8,~8.50,R410A,~24.0 kW,230 V,~34.0 A,3 Star,Non-Inverter
+Voltas,INVERTER DUCTABLE 5TR,5,~5.00,R32,~15.0 kW,230 V,~20.0 A,4 Star,Inverter
+Voltas,INVERTER DUCTABLE 6TR,6,~6.00,R32,~18.0 kW,230 V,~24.0 A,4 Star,Inverter
+Voltas,183V CZT R32,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,3 Star,Inverter
+Voltas,185V CZT R32,1.5,~1.25,R32,~5.0 kW,230 V,~5.6 A,5 Star,Inverter
+Voltas,243V CZT R32,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,3 Star,Inverter
+Voltas,245V CZT R32,2,~1.80,R32,~6.2 kW,230 V,~7.8 A,5 Star,Inverter
+Voltas,183C EZT R410A,1.5,~1.60,R410A,~5.0 kW,230 V,~7.0 A,3 Star,Non-Inverter
+Voltas,243C EZT R410A,2,~2.10,R410A,~6.2 kW,230 V,~9.0 A,3 Star,Non-Inverter
+Voltas,183V Vectra Platinum,1.5,~1.28,R32,~5.0 kW,230 V,~5.7 A,5 Star,Inverter
+Voltas,185V Vectra Platinum,1.5,~1.25,R32,~5.0 kW,230 V,~5.6 A,5 Star,Inverter
+Voltas,243V Vectra Platinum,2,~1.82,R32,~6.2 kW,230 V,~7.9 A,5 Star,Inverter
+Voltas,245V Vectra Platinum,2,~1.78,R32,~6.2 kW,230 V,~7.7 A,5 Star,Inverter
+Voltas,183V Smart Elite,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,4 Star,Inverter
+Voltas,243V Smart Elite,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,4 Star,Inverter
+Voltas,123C Basic,1,~1.15,R410A,~3.5 kW,230 V,~5.2 A,2 Star,Non-Inverter
+Voltas,183C Basic,1.5,~1.65,R410A,~5.0 kW,230 V,~7.2 A,2 Star,Non-Inverter
+Voltas,243C Basic,2,~2.15,R410A,~6.2 kW,230 V,~9.2 A,2 Star,Non-Inverter
+Voltas,123V Budget Inverter,1,~0.95,R32,~3.5 kW,230 V,~4.5 A,3 Star,Inverter
+Voltas,183V Budget Inverter,1.5,~1.35,R32,~5.0 kW,230 V,~6.0 A,3 Star,Inverter
+Voltas,123 LZF Deluxe,1,~1.10,R410A,~3.5 kW,230 V,~5.0 A,3 Star,Non-Inverter
+Voltas,125 LZF Deluxe,1,~1.05,R32,~3.5 kW,230 V,~4.8 A,5 Star,Non-Inverter
+Voltas,183 LZF Deluxe,1.5,~1.60,R410A,~5.0 kW,230 V,~7.0 A,3 Star,Non-Inverter
+Voltas,185 LZF Deluxe,1.5,~1.55,R32,~5.0 kW,230 V,~6.8 A,5 Star,Non-Inverter
+Voltas,243 LZF Deluxe,2,~2.10,R410A,~6.2 kW,230 V,~9.0 A,3 Star,Non-Inverter
+Voltas,245 LZF Deluxe,2,~2.05,R32,~6.2 kW,230 V,~8.8 A,5 Star,Non-Inverter
+Voltas,FLOOR STANDING 5TR,5,~5.60,R410A,~15.0 kW,230 V,~22.5 A,3 Star,Non-Inverter
+Voltas,FLOOR STANDING 6TR,6,~6.70,R410A,~18.0 kW,230 V,~26.5 A,3 Star,Non-Inverter
+Voltas,FLOOR STANDING 8TR,8,~8.80,R410A,~24.0 kW,230 V,~35.0 A,3 Star,Non-Inverter
+Voltas,INVERTER FLOOR 5TR,5,~5.10,R32,~15.0 kW,230 V,~20.5 A,4 Star,Inverter
+Voltas,INVERTER FLOOR 6TR,6,~6.20,R32,~18.0 kW,230 V,~24.5 A,4 Star,Inverter
+Voltas,183V CZT Premium,1.5,~1.30,R32,~5.0 kW,230 V,~5.8 A,3 Star,Inverter
+Voltas,185V CZT Premium,1.5,~1.25,R32,~5.0 kW,230 V,~5.6 A,5 Star,Inverter
+Voltas,243V CZT Premium,2,~1.85,R32,~6.2 kW,230 V,~8.0 A,3 Star,Inverter
+Voltas,245V CZT Premium,2,~1.80,R32,~6.2 kW,230 V,~7.8 A,5 Star,Inverter
+Voltas,183C EZT Premium,1.5,~1.60,R410A,~5.0 kW,230 V,~7.0 A,3 Star,Non-Inverter
+Voltas,243C EZT Premium,2,~2.10,R410A,~6.2 kW,230 V,~9.0 A,3 Star,Non-Inverter

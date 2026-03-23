@@ -74,27 +74,48 @@ export function ResultsSummaryGrid({
   return (
     <div className={className}>
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-        {summaryCards.map((card) => (
+        {summaryCards.map((card) => {
+          const overrideLabel =
+            card.key === 'energy'
+              ? summary.energyLabel
+              : card.key === 'cost'
+                ? summary.costLabel
+                : card.key === 'emissions'
+                  ? summary.emissionsLabel
+                  : summary.paybackLabel
+          const overrideUnit =
+            card.key === 'energy'
+              ? summary.energyUnit
+              : card.key === 'cost'
+                ? summary.costUnit
+                : card.key === 'emissions'
+                  ? summary.emissionsUnit
+                  : summary.paybackUnit
+
+          return (
           <Card key={card.key} className={card.wrapperClassName}>
             <CardContent className="flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4">
               <div className={`flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12 ${card.iconClassName}`}>
                 <card.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div className="min-w-0">
-                <p className="whitespace-nowrap text-sm text-muted-foreground">{card.label}</p>
+                <p className="whitespace-nowrap text-sm text-muted-foreground">
+                  {overrideLabel ?? card.label}
+                </p>
                 <p className="whitespace-nowrap text-xl font-bold sm:text-2xl">
                   {card.prefix ?? ''}
                   {summaryValues[card.key]}
                   {!(card.key === 'payback' && summaryValues.payback === 'N/A') ? (
                     <span className="ml-1 text-xs font-medium text-muted-foreground sm:text-sm">
-                      {card.unit}
+                      {overrideUnit ?? card.unit}
                     </span>
                   ) : null}
                 </p>
               </div>
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

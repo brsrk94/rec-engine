@@ -25,6 +25,8 @@ export interface AssessmentRecommendationCardSnapshot {
   recommendedAnnualEnergy?: number
   currentAnnualCost?: number
   recommendedAnnualCost?: number
+  currentAnnualEmissions?: number
+  recommendedAnnualEmissions?: number
 }
 
 export interface MotorComparisonSnapshot {
@@ -45,4 +47,12 @@ export interface AssessmentRecommendationSummary {
   totalCostSavings: number
   totalEmissionSavings: number
   averagePayback: string
+  energyLabel?: string
+  energyUnit?: string
+  costLabel?: string
+  costUnit?: string
+  emissionsLabel?: string
+  emissionsUnit?: string
+  paybackLabel?: string
+  paybackUnit?: string
 }

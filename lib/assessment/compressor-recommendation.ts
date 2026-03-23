@@ -159,6 +159,7 @@ export function buildCompressorRecommendation(
   assessment: CompressorAssessment,
   compressors: CompressorCatalogItem[]
 ) {
+  const requestedTargetType = assessment.target_compressor_type.trim()
   const currentRatingKw = normalizeCompressorRatingToKw(
     assessment.compressor_rating,
     assessment.compressor_rating_unit
@@ -214,6 +215,10 @@ export function buildCompressorRecommendation(
           return false
         }
 
+        if (requestedTargetType && candidate.benchmark_type !== requestedTargetType) {
+          return false
+        }
+
         return true
       })
       .map((candidate) => {
@@ -244,7 +249,7 @@ export function buildCompressorRecommendation(
           targetEfficiency,
           ratingDifferenceKw: Math.abs(candidate.rated_power_kw - referenceRatingKw),
           exactRating: Math.abs(candidate.rated_power_kw - referenceRatingKw) < 0.001,
-          matchesRequestedTargetType: candidate.benchmark_type === assessment.target_compressor_type,
+          matchesRequestedTargetType: candidate.benchmark_type === requestedTargetType,
           sameMake: candidate.make === assessment.compressor_make,
           metrics: {
             targetAnnualEnergy,

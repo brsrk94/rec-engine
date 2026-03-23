@@ -75,13 +75,26 @@ export interface BLDCFanAssessment {
 }
 
 export interface AirConditionerAssessment {
+  current_ac_catalog_key: string
+  current_ac_make: string
+  current_ac_model: string
+  current_cooling_capacity: string
+  current_cooling_capacity_unit: 'TR' | 'kW'
   current_ac_type: string
-  tonnage: string
-  number_of_units: string
+  current_ac_age_years: string
+  current_ac_star_rating: string
+  target_ac_type: string
+  target_ac_capacity: string
+  target_ac_capacity_unit: 'TR' | 'kW'
+  target_ac_star_rating: string
+  lifetime_of_target_ac: string
+  load_factor: string
   operating_hours_year: string
-  current_eer: string
   electricity_tariff: string
-  years_of_operation: string
+  grid_emission_factor: string
+  capex_of_current_ac: string
+  capex_of_target_ac: string
+  discount_rate_percent: string
 }
 
 export interface LEDRetrofitAssessment {
@@ -109,11 +122,24 @@ export interface LEDRetrofitAssessment {
 }
 
 export interface DGSetAssessment {
+  dg_catalog_key: string
+  dg_manufacturer: string
+  dg_model: string
   dg_capacity_kva: string
+  has_annual_diesel_consumption_data: 'yes' | 'no'
+  annual_diesel_consumption_l: string
   current_loading_percent: string
+  power_factor: string
   operating_hours_year: string
+  annual_electricity_generated_kwh: string
+  specific_fuel_consumption_l_per_kwh: string
   fuel_type: string
   fuel_cost_per_liter: string
+  diesel_replacement_percent: string
+  dual_fuel_kit_capex_inr: string
+  dual_fuel_kit_maintenance_inr_per_year: string
+  dual_fuel_kit_lifetime_years: string
+  discount_factor_percent: string
   years_of_operation: string
 }
 
@@ -204,13 +230,26 @@ const initialBLDCFanAssessment: BLDCFanAssessment = {
 }
 
 const initialAirConditionerAssessment: AirConditionerAssessment = {
+  current_ac_catalog_key: '',
+  current_ac_make: '',
+  current_ac_model: '',
+  current_cooling_capacity: '',
+  current_cooling_capacity_unit: 'TR',
   current_ac_type: '',
-  tonnage: '',
-  number_of_units: '1',
-  operating_hours_year: '',
-  current_eer: '',
+  current_ac_age_years: '',
+  current_ac_star_rating: '',
+  target_ac_type: '',
+  target_ac_capacity: '',
+  target_ac_capacity_unit: 'TR',
+  target_ac_star_rating: '',
+  lifetime_of_target_ac: '15',
+  load_factor: '80',
+  operating_hours_year: '2400',
   electricity_tariff: '8',
-  years_of_operation: '',
+  grid_emission_factor: '0.716',
+  capex_of_current_ac: '',
+  capex_of_target_ac: '',
+  discount_rate_percent: '8',
 }
 
 const initialLedRetrofitAssessment: LEDRetrofitAssessment = {
@@ -238,11 +277,24 @@ const initialLedRetrofitAssessment: LEDRetrofitAssessment = {
 }
 
 const initialDgSetAssessment: DGSetAssessment = {
+  dg_catalog_key: '',
+  dg_manufacturer: '',
+  dg_model: '',
   dg_capacity_kva: '',
-  current_loading_percent: '70',
-  operating_hours_year: '',
-  fuel_type: 'Diesel',
+  has_annual_diesel_consumption_data: 'no',
+  annual_diesel_consumption_l: '',
+  current_loading_percent: '75',
+  power_factor: '0.95',
+  operating_hours_year: '1000',
+  annual_electricity_generated_kwh: '',
+  specific_fuel_consumption_l_per_kwh: '0.26',
+  fuel_type: 'CNG',
   fuel_cost_per_liter: '90',
+  diesel_replacement_percent: '70',
+  dual_fuel_kit_capex_inr: '',
+  dual_fuel_kit_maintenance_inr_per_year: '20000',
+  dual_fuel_kit_lifetime_years: '10',
+  discount_factor_percent: '8',
   years_of_operation: '',
 }
 

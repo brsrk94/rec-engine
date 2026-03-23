@@ -81,8 +81,12 @@ function getEstimatedInvestmentTooltip(equipmentType?: string) {
       return 'Calculated as the target compressor capex minus the discounted value of the current compressor.'
     case 'bldc_fan':
       return 'For BLDC fans, this is the BLDC fan capex per fan multiplied by the number of fans being replaced. Installation costs are used in MAC, not here.'
+    case 'air_conditioner':
+      return 'For air conditioners, this is the target AC capex minus the discounted present value of the current AC.'
     case 'led_retrofit':
       return 'For LED retrofit, this is the LED capex per LED multiplied by the number of bulbs being replaced.'
+    case 'dg_set':
+      return 'For DG sets, this is the capex of installing the dual fuel kit, including kit and installation.'
     default:
       return 'This is the capital investment value used for the recommendation.'
   }
@@ -90,6 +94,28 @@ function getEstimatedInvestmentTooltip(equipmentType?: string) {
 
 function getMarginalAbatementCostTooltip() {
   return 'Marginal Abatement Cost shows the net cost to avoid 1 kgCO2e over the upgrade lifetime. Lower is better, and a negative value means the upgrade saves money while reducing emissions.'
+}
+
+function getMetricCopy(equipmentType?: string) {
+  if (equipmentType === 'dg_set') {
+    return {
+      energy: 'Diesel Savings',
+      energyUnit: 'L/year',
+      cost: 'Fuel Cost Savings',
+      costUnit: '/year',
+      emissions: 'CO2 Reduction',
+      emissionsUnit: 'kgCO2e/year',
+    }
+  }
+
+  return {
+    energy: 'Energy Savings',
+    energyUnit: 'kWh/yr',
+    cost: 'Energy Cost Savings',
+    costUnit: '/yr',
+    emissions: 'CO2 Reduction',
+    emissionsUnit: 'kgCO2e/year',
+  }
 }
 
 function MetricLabelWithTooltip({
@@ -134,6 +160,7 @@ export function RecommendationCard({
   const estimatedInvestmentTooltip = getEstimatedInvestmentTooltip(equipmentType)
   const marginalAbatementCostTooltip = getMarginalAbatementCostTooltip()
   const isTopRecommendation = recommendation.badge === 'Top Recommendation'
+  const metricCopy = getMetricCopy(equipmentType)
 
   return (
     <Card className="gap-0 overflow-hidden border-border/70 bg-white/94 py-0">
@@ -181,28 +208,28 @@ export function RecommendationCard({
 
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
             <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
-              <p className="whitespace-nowrap text-sm text-muted-foreground">Energy Savings</p>
+              <p className="whitespace-nowrap text-sm text-muted-foreground">{metricCopy.energy}</p>
               <MetricValue
                 value={formatMetricValue(recommendation.energySavings)}
                 accentClassName="text-primary"
-                suffix="kWh/yr"
+                suffix={metricCopy.energyUnit}
               />
             </div>
             <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
-              <p className="whitespace-nowrap text-sm text-muted-foreground">Energy Cost Savings</p>
+              <p className="whitespace-nowrap text-sm text-muted-foreground">{metricCopy.cost}</p>
               <MetricValue
                 value={formatMetricValue(recommendation.costSavings)}
                 accentClassName="text-green-600"
                 prefix="INR"
-                suffix="/yr"
+                suffix={metricCopy.costUnit}
               />
             </div>
             <div className="rounded-2xl border border-border/70 bg-secondary/40 p-3">
-              <p className="whitespace-nowrap text-sm text-muted-foreground">CO2 Reduction</p>
+              <p className="whitespace-nowrap text-sm text-muted-foreground">{metricCopy.emissions}</p>
               <MetricValue
                 value={formatMetricValue(recommendation.emissionSavings)}
                 accentClassName="text-emerald-600"
-                suffix="kgCO2e/year"
+                suffix={metricCopy.emissionsUnit}
               />
             </div>
             {motorComparison ? (

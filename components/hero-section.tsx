@@ -96,10 +96,6 @@ export function HeroSection() {
                 <h2 className="mt-3 text-lg font-semibold tracking-tight sm:text-2xl">
                   Assess motors, compressors, fans, ACs, lighting, and DG sets in one place.
                 </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  The homepage is now lighter and the heavy mockup has been removed,
-                  so the site focuses on getting people into the assessment flow quickly.
-                </p>
               </div>
               <div className="grid gap-3">
                 <div className="neo-card homepage-card rounded-2xl bg-white/80 px-4 py-3">

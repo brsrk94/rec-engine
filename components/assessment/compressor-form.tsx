@@ -527,6 +527,15 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
         (catalogCompressor) => getCompressorCatalogKey(catalogCompressor) === value
       ) ?? null
 
+    if (!nextTargetCompressor) {
+      updateCompressor({
+        target_compressor_catalog_key: '',
+        target_compressor_model: value,
+      })
+
+      return
+    }
+
     updateCompressor({
       target_compressor_catalog_key: value,
       target_compressor_make: nextTargetCompressor?.make ?? compressor.target_compressor_make,
@@ -630,7 +639,8 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                     placeholder={isCatalogLoading ? 'Loading makes...' : 'Choose make'}
                     searchPlaceholder="Search make"
                     emptyText="No makes found"
-                    disabled={isCatalogLoading || makeOptions.length === 0}
+                    allowCustomValue
+                    disabled={isCatalogLoading}
                     className="h-10 text-sm sm:h-9"
                   />
                 </Field>
@@ -646,7 +656,8 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                     }
                     searchPlaceholder="Search model"
                     emptyText="No models found"
-                    disabled={!compressor.compressor_make || modelOptions.length === 0}
+                    allowCustomValue
+                    disabled={!compressor.compressor_make || isCatalogLoading}
                     className="h-10 text-sm sm:h-9"
                   />
                 </Field>
@@ -786,7 +797,8 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                     }
                     searchPlaceholder="Search make"
                     emptyText="No makes found"
-                    disabled={!compressor.target_compressor_type || targetMakeOptions.length === 0}
+                    allowCustomValue
+                    disabled={!compressor.target_compressor_type || isCatalogLoading}
                     className="h-10 text-sm sm:h-9"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -797,7 +809,9 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                 <Field>
                   <FieldLabel className="text-sm leading-snug">Target Equipment Model</FieldLabel>
                   <SearchableSelect
-                    value={compressor.target_compressor_catalog_key}
+                    value={
+                      compressor.target_compressor_catalog_key || compressor.target_compressor_model
+                    }
                     onValueChange={handleTargetModelChange}
                     options={targetModelOptions}
                     placeholder={
@@ -807,10 +821,11 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                     }
                     searchPlaceholder="Search model"
                     emptyText="No models found"
+                    allowCustomValue
                     disabled={
                       !compressor.target_compressor_type ||
                       !compressor.target_compressor_make ||
-                      targetModelOptions.length === 0
+                      isCatalogLoading
                     }
                     className="h-10 text-sm sm:h-9"
                   />

@@ -28,6 +28,7 @@ interface SearchableSelectProps {
   placeholder: string
   searchPlaceholder: string
   emptyText: string
+  allowCustomValue?: boolean
   disabled?: boolean
   className?: string
 }
@@ -39,6 +40,7 @@ function SearchableSelectComponent({
   placeholder,
   searchPlaceholder,
   emptyText,
+  allowCustomValue = false,
   disabled = false,
   className,
 }: SearchableSelectProps) {
@@ -72,6 +74,23 @@ function SearchableSelectComponent({
 
     return indexedOptions.filter((option) => option.searchBlob.includes(normalizedQuery))
   }, [deferredQuery, indexedOptions])
+  const trimmedQuery = deferredQuery.trim()
+  const normalizedTrimmedQuery = trimmedQuery.toLowerCase()
+  const canAddCustomValue = useMemo(() => {
+    if (!allowCustomValue || !trimmedQuery) {
+      return false
+    }
+
+    return !options.some((option) => {
+      const normalizedValue = option.value.trim().toLowerCase()
+      const normalizedLabel = option.label.trim().toLowerCase()
+
+      return (
+        normalizedValue === normalizedTrimmedQuery || normalizedLabel === normalizedTrimmedQuery
+      )
+    })
+  }, [allowCustomValue, normalizedTrimmedQuery, options, trimmedQuery])
+  const triggerLabel = selectedOption?.label ?? value.trim() ?? ''
 
   useEffect(() => {
     if (!open && searchQuery) {
@@ -92,9 +111,7 @@ function SearchableSelectComponent({
             className
           )}
         >
-          <span className="truncate text-left">
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
+          <span className="truncate text-left">{triggerLabel || placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -110,7 +127,33 @@ function SearchableSelectComponent({
             placeholder={searchPlaceholder}
           />
           <CommandList>
-            {filteredOptions.length === 0 ? <CommandEmpty>{emptyText}</CommandEmpty> : null}
+            {filteredOptions.length === 0 && !canAddCustomValue ? (
+              <CommandEmpty>{emptyText}</CommandEmpty>
+            ) : null}
+            {canAddCustomValue ? (
+              <CommandItem
+                value={`__custom__:${trimmedQuery}`}
+                onSelect={() => {
+                  onValueChange(trimmedQuery)
+                  setOpen(false)
+                }}
+              >
+                <Check
+                  className={cn(
+                    'h-4 w-4',
+                    trimmedQuery.toLowerCase() === value.trim().toLowerCase()
+                      ? 'opacity-100'
+                      : 'opacity-0'
+                  )}
+                />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate">Add "{trimmedQuery}"</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Use this value even if it is not in the list
+                  </span>
+                </div>
+              </CommandItem>
+            ) : null}
             {filteredOptions.map((option) => (
               <CommandItem
                 key={option.value}

@@ -1,13 +1,11 @@
 import 'server-only'
 
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-
 import {
   getLEDCatalogKey,
   type LEDCatalogItem,
   type LEDCatalogPayload,
 } from '@/lib/led-catalog'
+import { readEquipmentCatalog } from '@/lib/server/read-equipment-catalog'
 
 let cachedPayload: LEDCatalogPayload | null = null
 
@@ -70,9 +68,7 @@ export async function getLEDCatalogPayload() {
     return cachedPayload
   }
 
-  const filePath = path.resolve(process.cwd(), 'data', 'equipment_catalog.json')
-  const rawCatalog = await readFile(filePath, 'utf8')
-  const catalog = JSON.parse(rawCatalog) as Array<Record<string, unknown>>
+  const catalog = await readEquipmentCatalog()
 
   const bulbs = Array.from(
     catalog

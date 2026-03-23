@@ -47,7 +47,15 @@ const catalogTypeToBenchmarkType: Record<string, { value: string; label: string 
     value: 'fixed_speed_rotary',
     label: 'Fixed Speed Rotary Screw',
   },
+  fixed_speed_rotary_screw: {
+    value: 'fixed_speed_rotary',
+    label: 'Fixed Speed Rotary Screw',
+  },
   rotary_screw_vfd: {
+    value: 'vsd_rotary',
+    label: 'Variable Speed Drive Rotary Screw',
+  },
+  vsd_rotary_screw: {
     value: 'vsd_rotary',
     label: 'Variable Speed Drive Rotary Screw',
   },
@@ -56,6 +64,10 @@ const catalogTypeToBenchmarkType: Record<string, { value: string; label: string 
     label: 'Reciprocating (Piston)',
   },
   reciprocating: {
+    value: 'reciprocating',
+    label: 'Reciprocating (Piston)',
+  },
+  reciprocating_piston: {
     value: 'reciprocating',
     label: 'Reciprocating (Piston)',
   },
@@ -76,6 +88,10 @@ const catalogTypeToBenchmarkType: Record<string, { value: string; label: string 
     label: 'Centrifugal Compressor',
   },
   oil_free_scroll: {
+    value: 'scroll',
+    label: 'Scroll Compressor',
+  },
+  scroll: {
     value: 'scroll',
     label: 'Scroll Compressor',
   },

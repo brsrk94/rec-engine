@@ -22,13 +22,17 @@ import {
   staggerItemVariants,
 } from '@/components/motion/variants'
 import { Button } from '@/components/ui/button'
+import { useAirConditionerCatalog } from '@/hooks/use-air-conditioner-catalog'
 import { useBLDCFanCatalog } from '@/hooks/use-bldc-fan-catalog'
 import { useCompressorCatalog } from '@/hooks/use-compressor-catalog'
+import { useDGSetCatalog } from '@/hooks/use-dg-set-catalog'
 import { useLEDCatalog } from '@/hooks/use-led-catalog'
 import { useAssessmentStorage, type AssessmentData } from '@/hooks/use-assessment-storage'
 import { useMotorCatalog } from '@/hooks/use-motor-catalog'
+import { buildAirConditionerRecommendation } from '@/lib/assessment/air-conditioner-recommendation'
 import { buildBLDCFanRecommendation } from '@/lib/assessment/bldc-fan-recommendation'
 import { buildCompressorRecommendation } from '@/lib/assessment/compressor-recommendation'
+import { buildDGSetRecommendation } from '@/lib/assessment/dg-set-recommendation'
 import {
   assessmentEquipmentMeta,
   type AssessmentEquipmentKey,
@@ -85,10 +89,32 @@ const BLDCFanRecommendationCharts = dynamic(
   }
 )
 
+const AirConditionerRecommendationCharts = dynamic(
+  () =>
+    import('@/components/assessment/air-conditioner-recommendation-charts').then(
+      (module) => module.AirConditionerRecommendationCharts
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  }
+)
+
 const LEDRetrofitRecommendationCharts = dynamic(
   () =>
     import('@/components/assessment/led-retrofit-recommendation-charts').then(
       (module) => module.LEDRetrofitRecommendationCharts
+    ),
+  {
+    ssr: false,
+    loading: () => <ChartPanelSkeleton />,
+  }
+)
+
+const DGSetRecommendationCharts = dynamic(
+  () =>
+    import('@/components/assessment/dg-set-recommendation-charts').then(
+      (module) => module.DGSetRecommendationCharts
     ),
   {
     ssr: false,
@@ -188,6 +214,14 @@ export function ResultsView() {
     enabled: isLoaded && equipmentType === 'compressor',
   })
   const {
+    catalog: airConditionerCatalog,
+    errorMessage: airConditionerCatalogError,
+    isLoading: isAirConditionerCatalogLoading,
+    reload: reloadAirConditionerCatalog,
+  } = useAirConditionerCatalog({
+    enabled: isLoaded && equipmentType === 'air_conditioner',
+  })
+  const {
     catalog: fanCatalog,
     errorMessage: fanCatalogError,
     isLoading: isFanCatalogLoading,
@@ -202,6 +236,14 @@ export function ResultsView() {
     reload: reloadLEDCatalog,
   } = useLEDCatalog({
     enabled: isLoaded && equipmentType === 'led_retrofit',
+  })
+  const {
+    catalog: dgSetCatalog,
+    errorMessage: dgSetCatalogError,
+    isLoading: isDGSetCatalogLoading,
+    reload: reloadDGSetCatalog,
+  } = useDGSetCatalog({
+    enabled: isLoaded && equipmentType === 'dg_set',
   })
 
   const recommendationResult = useMemo(() => {
@@ -233,6 +275,17 @@ export function ResultsView() {
       return buildBLDCFanRecommendation(data.bldc_fan, fanCatalog.fans)
     }
 
+    if (equipmentType === 'air_conditioner') {
+      if (!airConditionerCatalog) {
+        return null
+      }
+
+      return buildAirConditionerRecommendation(
+        data.air_conditioner,
+        airConditionerCatalog.airConditioners
+      )
+    }
+
     if (equipmentType === 'led_retrofit') {
       if (!ledCatalog) {
         return null
@@ -241,8 +294,26 @@ export function ResultsView() {
       return buildLEDRetrofitRecommendation(data.led_retrofit, ledCatalog.bulbs)
     }
 
+    if (equipmentType === 'dg_set') {
+      if (!dgSetCatalog) {
+        return null
+      }
+
+      return buildDGSetRecommendation(data.dg_set, dgSetCatalog.dgSets)
+    }
+
     return buildFallbackResults(equipmentType, data)
-  }, [compressorCatalog, data, equipmentType, fanCatalog, isLoaded, ledCatalog, motorCatalog])
+  }, [
+    airConditionerCatalog,
+    compressorCatalog,
+    data,
+    dgSetCatalog,
+    equipmentType,
+    fanCatalog,
+    isLoaded,
+    ledCatalog,
+    motorCatalog,
+  ])
 
   if (equipmentType === 'motor' && motorCatalogError) {
     return (
@@ -280,6 +351,18 @@ export function ResultsView() {
     )
   }
 
+  if (equipmentType === 'air_conditioner' && airConditionerCatalogError) {
+    return (
+      <ResultsErrorState
+        title="Unable to load air conditioner recommendations"
+        description={airConditionerCatalogError}
+        primaryActionLabel="Back to Air Conditioner Assessment"
+        onPrimaryAction={() => router.push('/assessment?type=air_conditioner')}
+        onRetry={reloadAirConditionerCatalog}
+      />
+    )
+  }
+
   if (equipmentType === 'led_retrofit' && ledCatalogError) {
     return (
       <ResultsErrorState
@@ -292,12 +375,26 @@ export function ResultsView() {
     )
   }
 
+  if (equipmentType === 'dg_set' && dgSetCatalogError) {
+    return (
+      <ResultsErrorState
+        title="Unable to load DG set recommendations"
+        description={dgSetCatalogError}
+        primaryActionLabel="Back to DG Set Assessment"
+        onPrimaryAction={() => router.push('/assessment?type=dg_set')}
+        onRetry={reloadDGSetCatalog}
+      />
+    )
+  }
+
   if (
     !isLoaded ||
     (equipmentType === 'motor' && isMotorCatalogLoading) ||
     (equipmentType === 'compressor' && isCompressorCatalogLoading) ||
     (equipmentType === 'bldc_fan' && isFanCatalogLoading) ||
+    (equipmentType === 'air_conditioner' && isAirConditionerCatalogLoading) ||
     (equipmentType === 'led_retrofit' && isLEDCatalogLoading) ||
+    (equipmentType === 'dg_set' && isDGSetCatalogLoading) ||
     !recommendationResult
   ) {
     return <ResultsLoadingState />
@@ -307,7 +404,9 @@ export function ResultsView() {
     equipmentType === 'motor' ? (recommendationResult as MotorRecommendationResult) : null
   const isCompressorResults = equipmentType === 'compressor'
   const isBLDCFanResults = equipmentType === 'bldc_fan'
+  const isAirConditionerResults = equipmentType === 'air_conditioner'
   const isLEDRetrofitResults = equipmentType === 'led_retrofit'
+  const isDGSetResults = equipmentType === 'dg_set'
 
   const startFreshAssessment = () => {
     clearAll()
@@ -396,9 +495,27 @@ export function ResultsView() {
             </motion.div>
           ) : null}
 
+          {isAirConditionerResults ? (
+            <motion.div variants={staggerItemVariants}>
+              <AirConditionerRecommendationCharts
+                currentSystem={recommendationResult.currentSystem}
+                recommendations={recommendationResult.recommendations}
+              />
+            </motion.div>
+          ) : null}
+
           {isLEDRetrofitResults ? (
             <motion.div variants={staggerItemVariants}>
               <LEDRetrofitRecommendationCharts
+                currentSystem={recommendationResult.currentSystem}
+                recommendations={recommendationResult.recommendations}
+              />
+            </motion.div>
+          ) : null}
+
+          {isDGSetResults ? (
+            <motion.div variants={staggerItemVariants}>
+              <DGSetRecommendationCharts
                 currentSystem={recommendationResult.currentSystem}
                 recommendations={recommendationResult.recommendations}
               />
