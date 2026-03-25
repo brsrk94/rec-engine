@@ -418,7 +418,7 @@ export function MotorForm({ onBack }: MotorFormProps) {
                           years_of_operation_current_motor_class: event.target.value,
                         })
                       }
-                      suffix="YR"
+                      suffix="years"
                     />
                   </Field>
 
@@ -556,13 +556,13 @@ export function MotorForm({ onBack }: MotorFormProps) {
                     </Field>
 
                     <Field>
-                      <FieldLabel className="text-sm leading-snug">Number of Equipment Units</FieldLabel>
+                      <FieldLabel className="text-sm leading-snug">Number of Motors to Upgrade</FieldLabel>
                       <InputWithSuffix
                         type="number"
                         min="1"
                         value={motor.number_of_motors}
                         onChange={(event) => updateMotor({ number_of_motors: event.target.value })}
-                        suffix="NOS"
+                        suffix="UNIT"
                       />
                     </Field>
 

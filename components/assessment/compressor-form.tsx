@@ -21,11 +21,12 @@ import { useAssessmentStorage } from '@/hooks/use-assessment-storage'
 import { useCompressorCatalog } from '@/hooks/use-compressor-catalog'
 import {
   COMPRESSOR_TYPE_OPTIONS,
+  getCompressorTargetEfficiency,
   getDefaultCompressorCapex,
   getSuggestedTargetCompressorType,
   normalizeCompressorRatingToKw,
 } from '@/lib/assessment/compressor-benchmarks'
-import { getCompressorCatalogKey, type CompressorCatalogItem } from '@/lib/compressor-catalog'
+import type { CompressorCatalogItem } from '@/lib/compressor-catalog'
 import { cn } from '@/lib/utils'
 import { fadeUpVariants } from '@/components/motion/variants'
 import { AssessmentEquipmentImage } from './equipment-image'
@@ -106,41 +107,6 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
     )
   }, [catalog, compressor.compressor_make, compressor.compressor_model])
 
-  const selectedTargetCatalogCompressor = useMemo(() => {
-    if (!catalog) {
-      return null
-    }
-
-    if (compressor.target_compressor_catalog_key) {
-      return (
-        catalog.compressors.find(
-          (catalogCompressor) =>
-            getCompressorCatalogKey(catalogCompressor) === compressor.target_compressor_catalog_key
-        ) ?? null
-      )
-    }
-
-    if (!compressor.target_compressor_make || !compressor.target_compressor_model) {
-      return null
-    }
-
-    return (
-      catalog.compressors.find(
-        (catalogCompressor) =>
-          catalogCompressor.make === compressor.target_compressor_make &&
-          catalogCompressor.model === compressor.target_compressor_model &&
-          (!compressor.target_compressor_type ||
-            catalogCompressor.benchmark_type === compressor.target_compressor_type)
-      ) ?? null
-    )
-  }, [
-    catalog,
-    compressor.target_compressor_catalog_key,
-    compressor.target_compressor_make,
-    compressor.target_compressor_model,
-    compressor.target_compressor_type,
-  ])
-
   const makeOptions = useMemo(
     () =>
       (catalog?.makeCounts ?? []).map(({ make }) => ({
@@ -185,59 +151,6 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
     [modelsForSelectedMake]
   )
 
-  const targetCompressorsForSelectedType = useMemo(
-    () =>
-      (catalog?.compressors ?? []).filter(
-        (catalogCompressor) =>
-          !compressor.target_compressor_type ||
-          catalogCompressor.benchmark_type === compressor.target_compressor_type
-      ),
-    [catalog, compressor.target_compressor_type]
-  )
-
-  const targetMakeOptions = useMemo(
-    () =>
-      Array.from(
-        targetCompressorsForSelectedType.reduce((uniqueMakes, catalogCompressor) => {
-          if (!uniqueMakes.has(catalogCompressor.make)) {
-            uniqueMakes.set(catalogCompressor.make, {
-              value: catalogCompressor.make,
-              label: catalogCompressor.make,
-              keywords: [catalogCompressor.make],
-            })
-          }
-
-          return uniqueMakes
-        }, new Map<string, { value: string; label: string; keywords: string[] }>())
-      ).map(([, option]) => option),
-    [targetCompressorsForSelectedType]
-  )
-
-  const targetModelsForSelectedMake = useMemo(
-    () =>
-      targetCompressorsForSelectedType.filter(
-        (catalogCompressor) => catalogCompressor.make === compressor.target_compressor_make
-      ),
-    [compressor.target_compressor_make, targetCompressorsForSelectedType]
-  )
-
-  const targetModelOptions = useMemo(
-    () =>
-      targetModelsForSelectedMake.map((catalogCompressor) => ({
-        value: getCompressorCatalogKey(catalogCompressor),
-        label: catalogCompressor.model,
-        description: `${catalogCompressor.benchmark_type_label} | ${catalogCompressor.rated_power_kw} kW${catalogCompressor.series ? ` | ${catalogCompressor.series}` : ''}`,
-        keywords: [
-          catalogCompressor.model,
-          catalogCompressor.benchmark_type_label,
-          catalogCompressor.compressor_type_label ?? '',
-          catalogCompressor.series ?? '',
-          String(catalogCompressor.rated_power_kw),
-        ],
-      })),
-    [targetModelsForSelectedMake]
-  )
-
   const defaultCurrentCapex = useMemo(
     () =>
       getDefaultCompressorCapex(
@@ -269,13 +182,18 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
   )
 
   const autoCalculatedEnergyConsumption = useMemo(() => {
-    const currentRatingKw = normalizeCompressorRatingToKw(
-      compressor.compressor_rating,
-      compressor.compressor_rating_unit
+    const targetRatingKw = normalizeCompressorRatingToKw(
+      compressor.target_compressor_rating || compressor.compressor_rating,
+      compressor.target_compressor_rating_unit || compressor.compressor_rating_unit
     )
     const operatingHours = Number.parseFloat(compressor.compressor_operating_hours_year)
+    const loadFactor = (Number.parseFloat(compressor.compressor_load_factor) || 80) / 100
+    const targetType = compressor.target_compressor_type || compressor.current_compressor_type
+    
+    // Calculate benchmark efficiency exactly like backend
+    const targetEfficiency = getCompressorTargetEfficiency(targetType) || 0.85
 
-    if (!Number.isFinite(currentRatingKw) || currentRatingKw <= 0) {
+    if (!Number.isFinite(targetRatingKw) || targetRatingKw <= 0) {
       return ''
     }
 
@@ -283,11 +201,17 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
       return ''
     }
 
-    return formatAutoCalculatedValue(currentRatingKw * operatingHours)
+    const calculatedEnergy = (targetRatingKw * operatingHours * loadFactor) / targetEfficiency
+    return formatAutoCalculatedValue(calculatedEnergy)
   }, [
-    compressor.compressor_operating_hours_year,
     compressor.compressor_rating,
     compressor.compressor_rating_unit,
+    compressor.target_compressor_rating,
+    compressor.target_compressor_rating_unit,
+    compressor.compressor_load_factor,
+    compressor.compressor_operating_hours_year,
+    compressor.target_compressor_type,
+    compressor.current_compressor_type
   ])
 
   useEffect(() => {
@@ -310,53 +234,6 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
   }, [selectedCatalogCompressor, updateCompressor])
 
   useEffect(() => {
-    if (!selectedTargetCatalogCompressor) {
-      return
-    }
-
-    const nextCatalogKey = getCompressorCatalogKey(selectedTargetCatalogCompressor)
-    const nextTargetCapex = String(
-      getDefaultCompressorCapex(
-        selectedTargetCatalogCompressor.benchmark_type,
-        selectedTargetCatalogCompressor.rated_power_kw,
-        'kW'
-      ) || ''
-    )
-
-    if (
-      compressor.target_compressor_catalog_key === nextCatalogKey &&
-      compressor.target_compressor_make === selectedTargetCatalogCompressor.make &&
-      compressor.target_compressor_model === selectedTargetCatalogCompressor.model &&
-      compressor.target_compressor_type === selectedTargetCatalogCompressor.benchmark_type &&
-      compressor.target_compressor_rating === String(selectedTargetCatalogCompressor.rated_power_kw) &&
-      compressor.target_compressor_rating_unit === 'kW' &&
-      compressor.capex_of_target_compressor === nextTargetCapex
-    ) {
-      return
-    }
-
-    updateCompressor({
-      target_compressor_catalog_key: nextCatalogKey,
-      target_compressor_make: selectedTargetCatalogCompressor.make,
-      target_compressor_model: selectedTargetCatalogCompressor.model,
-      target_compressor_type: selectedTargetCatalogCompressor.benchmark_type,
-      target_compressor_rating: String(selectedTargetCatalogCompressor.rated_power_kw),
-      target_compressor_rating_unit: 'kW',
-      capex_of_target_compressor: nextTargetCapex,
-    })
-  }, [
-    compressor.capex_of_target_compressor,
-    compressor.target_compressor_catalog_key,
-    compressor.target_compressor_make,
-    compressor.target_compressor_model,
-    compressor.target_compressor_rating,
-    compressor.target_compressor_rating_unit,
-    compressor.target_compressor_type,
-    selectedTargetCatalogCompressor,
-    updateCompressor,
-  ])
-
-  useEffect(() => {
     if (compressor.current_compressor_type && !compressor.target_compressor_type) {
       const suggestedTarget = getSuggestedTargetCompressorType(compressor.current_compressor_type)
 
@@ -367,10 +244,27 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
   }, [compressor.current_compressor_type, compressor.target_compressor_type, updateCompressor])
 
   useEffect(() => {
-    if (compressor.target_compressor_catalog_key) {
+    if (
+      !compressor.target_compressor_make &&
+      !compressor.target_compressor_model &&
+      !compressor.target_compressor_catalog_key
+    ) {
       return
     }
 
+    updateCompressor({
+      target_compressor_make: '',
+      target_compressor_model: '',
+      target_compressor_catalog_key: '',
+    })
+  }, [
+    compressor.target_compressor_catalog_key,
+    compressor.target_compressor_make,
+    compressor.target_compressor_model,
+    updateCompressor,
+  ])
+
+  useEffect(() => {
     if (!compressor.compressor_rating) {
       return
     }
@@ -386,10 +280,6 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
   }, [compressor.compressor_rating, compressor.target_compressor_rating, updateCompressor])
 
   useEffect(() => {
-    if (compressor.target_compressor_catalog_key) {
-      return
-    }
-
     const canMirrorTargetUnit =
       !compressor.target_compressor_rating ||
       compressor.target_compressor_rating === previousMirroredTargetRating.current ||
@@ -491,70 +381,11 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
   }
 
   const handleTargetTypeChange = (value: string) => {
-    const shouldPreserveSelectedTarget =
-      selectedTargetCatalogCompressor?.benchmark_type === value
-
     updateCompressor({
       target_compressor_type: value,
-      ...(shouldPreserveSelectedTarget
-        ? {}
-        : {
-            target_compressor_make: '',
-            target_compressor_model: '',
-            target_compressor_catalog_key: '',
-          }),
-    })
-  }
-
-  const handleTargetMakeChange = (value: string) => {
-    if (value === compressor.target_compressor_make) {
-      return
-    }
-
-    updateCompressor({
-      target_compressor_make: value,
+      target_compressor_make: '',
       target_compressor_model: '',
       target_compressor_catalog_key: '',
-      target_compressor_rating: '',
-      target_compressor_rating_unit: 'kW',
-      capex_of_target_compressor: '',
-    })
-  }
-
-  const handleTargetModelChange = (value: string) => {
-    const nextTargetCompressor =
-      targetModelsForSelectedMake.find(
-        (catalogCompressor) => getCompressorCatalogKey(catalogCompressor) === value
-      ) ?? null
-
-    if (!nextTargetCompressor) {
-      updateCompressor({
-        target_compressor_catalog_key: '',
-        target_compressor_model: value,
-      })
-
-      return
-    }
-
-    updateCompressor({
-      target_compressor_catalog_key: value,
-      target_compressor_make: nextTargetCompressor?.make ?? compressor.target_compressor_make,
-      target_compressor_model: nextTargetCompressor?.model ?? '',
-      target_compressor_type:
-        nextTargetCompressor?.benchmark_type ?? compressor.target_compressor_type,
-      target_compressor_rating: nextTargetCompressor
-        ? String(nextTargetCompressor.rated_power_kw)
-        : '',
-      target_compressor_rating_unit: 'kW',
-      capex_of_target_compressor: String(
-        nextTargetCompressor
-          ? getDefaultCompressorCapex(
-              nextTargetCompressor.benchmark_type,
-              nextTargetCompressor.rated_power_kw,
-              'kW'
-            ) || ''
-          : ''
-      ),
     })
   }
 
@@ -787,54 +618,6 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                 </Field>
 
                 <Field>
-                  <FieldLabel className="text-sm leading-snug">Target Equipment Make</FieldLabel>
-                  <SearchableSelect
-                    value={compressor.target_compressor_make}
-                    onValueChange={handleTargetMakeChange}
-                    options={targetMakeOptions}
-                    placeholder={
-                      compressor.target_compressor_type ? 'Choose target make' : 'Choose target type first'
-                    }
-                    searchPlaceholder="Search make"
-                    emptyText="No makes found"
-                    allowCustomValue
-                    disabled={!compressor.target_compressor_type || isCatalogLoading}
-                    className="h-10 text-sm sm:h-9"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional. Choose a target make to narrow the catalog list.
-                  </p>
-                </Field>
-
-                <Field>
-                  <FieldLabel className="text-sm leading-snug">Target Equipment Model</FieldLabel>
-                  <SearchableSelect
-                    value={
-                      compressor.target_compressor_catalog_key || compressor.target_compressor_model
-                    }
-                    onValueChange={handleTargetModelChange}
-                    options={targetModelOptions}
-                    placeholder={
-                      compressor.target_compressor_make
-                        ? 'Choose target model'
-                        : 'Choose target make first'
-                    }
-                    searchPlaceholder="Search model"
-                    emptyText="No models found"
-                    allowCustomValue
-                    disabled={
-                      !compressor.target_compressor_type ||
-                      !compressor.target_compressor_make ||
-                      isCatalogLoading
-                    }
-                    className="h-10 text-sm sm:h-9"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional. Selecting a model auto-fills the target type and rated capacity.
-                  </p>
-                </Field>
-
-                <Field>
                   <FieldLabel className="text-sm leading-snug">
                     Rated Capacity - Target Compressor
                   </FieldLabel>
@@ -970,7 +753,7 @@ export function CompressorForm({ onBack }: CompressorFormProps) {
                 </Field>
 
                 <Field className="sm:col-span-2 xl:col-span-2">
-                  <FieldLabel className="text-sm leading-snug">Energy Consumption</FieldLabel>
+                  <FieldLabel className="text-sm leading-snug">Target Compressor Energy Consumption</FieldLabel>
                   <InputWithSuffix
                     type="number"
                     min="0"

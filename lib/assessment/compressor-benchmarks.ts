@@ -23,48 +23,48 @@ interface CompressorBenchmark {
 export const COMPRESSOR_BENCHMARKS: Record<CompressorTypeId, CompressorBenchmark> = {
   reciprocating: {
     label: 'Reciprocating (Piston)',
-    leastEfficiency: 0.7,
-    maxEfficiency: 0.85,
+    leastEfficiency: 0.65,
+    maxEfficiency: 0.75,
     leastCapexPerKw: 8000,
     maxCapexPerKw: 14000,
     typicalLifetime: '10-15 years',
   },
   fixed_speed_rotary: {
     label: 'Fixed Speed Rotary Screw',
-    leastEfficiency: 0.65,
-    maxEfficiency: 0.75,
+    leastEfficiency: 0.70,
+    maxEfficiency: 0.80,
     leastCapexPerKw: 12000,
     maxCapexPerKw: 20000,
     typicalLifetime: '10-15 years',
   },
   vsd_rotary: {
     label: 'Variable Speed Drive Rotary Screw',
-    leastEfficiency: 0.7,
-    maxEfficiency: 0.8,
+    leastEfficiency: 0.80,
+    maxEfficiency: 0.90,
     leastCapexPerKw: 16000,
     maxCapexPerKw: 26000,
     typicalLifetime: '8-12 years',
   },
   centrifugal: {
     label: 'Centrifugal Compressor',
-    leastEfficiency: 0.75,
-    maxEfficiency: 0.85,
+    leastEfficiency: 0.80,
+    maxEfficiency: 0.90,
     leastCapexPerKw: 25000,
     maxCapexPerKw: 45000,
     typicalLifetime: '10-15 years',
   },
   scroll: {
     label: 'Scroll Compressor',
-    leastEfficiency: 0.7,
-    maxEfficiency: 0.8,
+    leastEfficiency: 0.70,
+    maxEfficiency: 0.80,
     leastCapexPerKw: 14000,
     maxCapexPerKw: 22000,
     typicalLifetime: '8-10 years',
   },
   oil_free_screw: {
     label: 'Oil-Free Screw Compressor',
-    leastEfficiency: 0.7,
-    maxEfficiency: 0.8,
+    leastEfficiency: 0.65,
+    maxEfficiency: 0.75,
     leastCapexPerKw: 25000,
     maxCapexPerKw: 55000,
     typicalLifetime: '10-15 years',
@@ -105,7 +105,7 @@ export function getCompressorTargetEfficiency(type: string) {
     return 0
   }
 
-  return COMPRESSOR_BENCHMARKS[type as CompressorTypeId].maxEfficiency
+  return COMPRESSOR_BENCHMARKS[type as CompressorTypeId].leastEfficiency
 }
 
 export function getCompressorLeastCapexPerKw(type: string) {

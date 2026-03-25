@@ -24,6 +24,42 @@ export const DG_DEFAULTS = {
   dieselReplacementPercent: 70,
 } as const
 
+const DG_SFC_TABLE: Array<{ loadPercent: number; sfcLPerKwh: number }> = [
+  { loadPercent: 25, sfcLPerKwh: 0.35 },
+  { loadPercent: 50, sfcLPerKwh: 0.29 },
+  { loadPercent: 75, sfcLPerKwh: 0.26 },
+  { loadPercent: 100, sfcLPerKwh: 0.27 },
+]
+
+export function getDGSfcFromLoadPercent(loadPercent: number): number {
+  if (loadPercent <= DG_SFC_TABLE[0].loadPercent) {
+    return DG_SFC_TABLE[0].sfcLPerKwh
+  }
+
+  if (loadPercent >= DG_SFC_TABLE[DG_SFC_TABLE.length - 1].loadPercent) {
+    return DG_SFC_TABLE[DG_SFC_TABLE.length - 1].sfcLPerKwh
+  }
+
+  for (let i = 0; i < DG_SFC_TABLE.length - 1; i++) {
+    const lower = DG_SFC_TABLE[i]
+    const upper = DG_SFC_TABLE[i + 1]
+
+    if (loadPercent >= lower.loadPercent && loadPercent <= upper.loadPercent) {
+      const ratio =
+        (loadPercent - lower.loadPercent) / (upper.loadPercent - lower.loadPercent)
+      return lower.sfcLPerKwh + ratio * (upper.sfcLPerKwh - lower.sfcLPerKwh)
+    }
+  }
+
+  return DG_DEFAULTS.specificFuelConsumption
+}
+
+export const DG_DEFAULT_SUBSTITUTION_PERCENT: Record<string, number> = {
+  PNG: 75,
+  CNG: 75,
+  LPG: 65,
+}
+
 export const DG_REPLACEMENT_FUEL_OPTIONS = [
   { value: 'PNG', label: 'PNG' },
   { value: 'CNG', label: 'CNG' },
@@ -192,15 +228,11 @@ function buildCurrentBaseline(assessment: DGSetAssessment): DGCurrentBaselineMet
   const averageLoadOutputKw = averageLoadKva * powerFactor
   const operatingHoursYear = parsePositiveNumber(assessment.operating_hours_year) || 1000
 
-  const annualElectricityGeneratedInput = parsePositiveNumber(
-    assessment.annual_electricity_generated_kwh
-  )
-  const annualElectricityGeneratedKwh =
-    annualElectricityGeneratedInput || averageLoadOutputKw * operatingHoursYear
+  const annualElectricityGeneratedKwh = averageLoadOutputKw * operatingHoursYear
 
   const specificFuelConsumptionLPerKwh =
     parsePositiveNumber(assessment.specific_fuel_consumption_l_per_kwh) ||
-    DG_DEFAULTS.specificFuelConsumption
+    getDGSfcFromLoadPercent(averageLoadPercent)
 
   const annualDieselConsumptionInput = parsePositiveNumber(assessment.annual_diesel_consumption_l)
   const hasUserProvidedAnnualDieselConsumption =
@@ -278,6 +310,8 @@ function calculateDGRecommendationMetrics(
   candidate: DGSetCatalogItem | null
 ): DGSetRecommendationMetrics {
   const replacementFuel = DG_REPLACEMENT_FUEL_DATA[currentBaseline.replacementFuelType]
+  const userFuelRate = parsePositiveNumber(assessment.other_fuel_rate_inr_per_liter)
+  const effectiveFuelRate = userFuelRate > 0 ? userFuelRate : replacementFuel.rateInrPerLiterEquivalent
   const candidateMake = candidate?.make?.trim() || currentBaseline.manufacturer
   const candidateModel = candidate?.model?.trim() || currentBaseline.model
   const candidateRatedCapacityKva =
@@ -327,7 +361,7 @@ function calculateDGRecommendationMetrics(
   const annualDieselCostAfterInr =
     annualDieselConsumptionAfterL * currentBaseline.dieselRateInrPerLiter
   const annualOtherFuelCostAfterInr =
-    annualOtherFuelConsumptionAfterL * replacementFuel.rateInrPerLiterEquivalent
+    annualOtherFuelConsumptionAfterL * effectiveFuelRate
   const annualTotalCostAfterInr = annualDieselCostAfterInr + annualOtherFuelCostAfterInr
 
   const annualDieselSavingsL = Math.max(
@@ -505,7 +539,10 @@ function selectDiversifiedDGCandidates(candidates: DGRecommendationCandidate[], 
   return selected.slice(0, limit)
 }
 
-function buildCurrentSystem(metrics: DGCurrentBaselineMetrics): AssessmentCurrentSystemSnapshot {
+function buildCurrentSystem(
+  metrics: DGCurrentBaselineMetrics,
+  recommendationMetrics?: DGSetRecommendationMetrics
+): AssessmentCurrentSystemSnapshot {
   return {
     type: 'Diesel Generator Set',
     rating: `${formatWholeNumber(metrics.ratedCapacityKva)} kVA | ${formatWholeNumber(metrics.averageLoadPercent)}% avg load`,
@@ -513,6 +550,7 @@ function buildCurrentSystem(metrics: DGCurrentBaselineMetrics): AssessmentCurren
     model: metrics.model,
     annualEnergy: formatWholeNumber(metrics.annualEnergyConsumptionBeforeKwh),
     annualCost: formatWholeNumber(metrics.annualCostBeforeInr),
+    annualDieselConsumption: formatWholeNumber(metrics.annualDieselConsumptionBeforeL),
   }
 }
 
@@ -535,7 +573,9 @@ function buildRecommendationSnapshot(
     efficiency: Math.max(0, Math.round(metrics.annualEmissionSavingsPercent)),
     details: `${formatWholeNumber(metrics.candidateRatedCapacityKva)} kVA | ${metrics.candidateFuelConsumptionLphAtFullLoad.toFixed(1)} L/hr @100% | ${metrics.replacementFuelType} dual fuel retrofit`,
     marginalAbatementCost: formatMacValue(metrics.marginalAbatementCostInrPerKg),
-    recommendedAnnualEnergy: formatWholeNumber(metrics.annualEnergyConsumptionCandidateBeforeKwh),
+    currentAnnualEnergy: formatWholeNumber(metrics.annualEnergyConsumptionBeforeKwh),
+    recommendedAnnualEnergy: formatWholeNumber(metrics.annualDieselEnergyAfterKwh),
+    dieselEnergyReplaced: formatWholeNumber(metrics.annualOtherFuelEnergyAfterKwh),
     currentAnnualCost: formatWholeNumber(metrics.annualCostBeforeInr),
     recommendedAnnualCost: formatWholeNumber(metrics.annualTotalCostAfterInr),
     currentAnnualEmissions: formatWholeNumber(metrics.annualEmissionsBeforeKg),
@@ -562,88 +602,21 @@ function buildSummary(metrics: DGSetRecommendationMetrics): AssessmentRecommenda
 
 export function buildDGSetRecommendation(
   assessment: DGSetAssessment,
-  dgSets: DGSetCatalogItem[] = []
+  _dgSets: DGSetCatalogItem[] = []
 ): DGSetRecommendationResult {
   const currentBaseline = buildCurrentBaseline(assessment)
-  const currentCatalogKey = assessment.dg_catalog_key
-  const requiredAverageLoadKva =
-    currentBaseline.powerFactor > 0
-      ? currentBaseline.averageLoadOutputKw / currentBaseline.powerFactor
-      : currentBaseline.averageLoadKva
-  const capacityToleranceKva = getCapacityToleranceKva(currentBaseline.ratedCapacityKva || 25)
-
-  const candidatePool = dgSets
-    .filter((candidate) => {
-      const candidateCapacity = candidate.rated_capacity_kva ?? 0
-      const candidateKey = getDGSetCatalogKey(candidate)
-
-      return (
-        candidateKey !== currentCatalogKey &&
-        candidateCapacity > 0 &&
-        (candidate.fuel_consumption_lph_full_load ?? 0) > 0 &&
-        candidateCapacity >= Math.max(requiredAverageLoadKva, 1)
-      )
-    })
-    .map((candidate) => {
-      const metrics = calculateDGRecommendationMetrics(assessment, currentBaseline, candidate)
-      const capacityGapKva = Math.abs(
-        (candidate.rated_capacity_kva ?? currentBaseline.ratedCapacityKva) -
-          currentBaseline.ratedCapacityKva
-      )
-
-      if (
-        metrics.annualDieselSavingsL <= 0 ||
-        metrics.annualCostSavingsInr <= 0 ||
-        metrics.annualEmissionSavingsKg <= 0
-      ) {
-        return null
-      }
-
-      return {
-        candidate,
-        metrics,
-        capacityGapKva,
-        sameCurrentMake:
-          candidate.make.trim().toLowerCase() === currentBaseline.manufacturer.trim().toLowerCase(),
-      }
-    })
-    .filter((candidate): candidate is DGRecommendationCandidate => candidate !== null)
-
-  const closeCapacityCandidates = candidatePool.filter(
-    (candidate) => candidate.capacityGapKva <= capacityToleranceKva
-  )
-
-  const shortlistedCandidates = selectDiversifiedDGCandidates(
-    closeCapacityCandidates.length > 0 ? closeCapacityCandidates : candidatePool,
-    3
-  )
-
-  if (shortlistedCandidates.length === 0) {
-    const fallbackMetrics = calculateDGRecommendationMetrics(assessment, currentBaseline, null)
-
-    return {
-      currentSystem: buildCurrentSystem(currentBaseline),
-      recommendations: [
-        {
-          ...buildRecommendationSnapshot(fallbackMetrics, 0, 'Scenario-based recommendation'),
-          name: 'Dual Fuel Kit Retrofit',
-          make: currentBaseline.manufacturer,
-          model: currentBaseline.model,
-        },
-      ],
-      summary: buildSummary(fallbackMetrics),
-    }
-  }
+  const recommendationMetrics = calculateDGRecommendationMetrics(assessment, currentBaseline, null)
 
   return {
-    currentSystem: buildCurrentSystem(currentBaseline),
-    recommendations: shortlistedCandidates.map((candidate, index) =>
-      buildRecommendationSnapshot(
-        candidate.metrics,
-        index,
-        index === 0 ? 'Top Recommendation' : 'Recommended'
-      )
-    ),
-    summary: buildSummary(shortlistedCandidates[0].metrics),
+    currentSystem: buildCurrentSystem(currentBaseline, recommendationMetrics),
+    recommendations: [
+      {
+        ...buildRecommendationSnapshot(recommendationMetrics, 0, 'Scenario-based recommendation'),
+        name: `Dual Fuel Kit Retrofit (${currentBaseline.replacementFuelType})`,
+        make: currentBaseline.manufacturer,
+        model: currentBaseline.model,
+      },
+    ],
+    summary: buildSummary(recommendationMetrics),
   }
 }

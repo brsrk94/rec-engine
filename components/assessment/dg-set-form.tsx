@@ -28,10 +28,18 @@ import {
 } from '@/lib/dg-set-catalog'
 import {
   DG_DEFAULTS,
+  DG_DEFAULT_SUBSTITUTION_PERCENT,
   DG_REPLACEMENT_FUEL_OPTIONS,
+  getDGSfcFromLoadPercent,
 } from '@/lib/assessment/dg-set-recommendation'
 import { getDGCapexBenchmark, getDefaultDGCapex } from '@/lib/assessment/dg-set-benchmarks'
 import { cn } from '@/lib/utils'
+
+const DG_DEFAULT_FUEL_RATES: Record<string, number> = {
+  PNG: 0.055,
+  CNG: 14,
+  LPG: 32,
+}
 
 interface DGSetFormProps {
   onBack: () => void
@@ -117,6 +125,8 @@ export function DGSetForm({ onBack }: DGSetFormProps) {
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const lastAutoSfcRef = useRef('')
   const lastAutoCapexRef = useRef('')
+  const lastAutoFuelRateRef = useRef('')
+  const lastAutoSubstitutionRef = useRef('')
   const dg = data.dg_set
 
   const selectedCatalogDGSet = useMemo(() => {
@@ -173,6 +183,20 @@ export function DGSetForm({ onBack }: DGSetFormProps) {
 
   const effectivePowerFactor = parsePositiveNumber(dg.power_factor) || DG_DEFAULTS.powerFactor
   const ratedCapacityKva = parsePositiveNumber(dg.dg_capacity_kva)
+  const averageLoadPercent = Math.min(
+    Math.max(parsePositiveNumber(dg.current_loading_percent) || 75, 0),
+    100
+  )
+  const operatingHoursYear = parsePositiveNumber(dg.operating_hours_year) || 1000
+  const effectiveSfc = parsePositiveNumber(dg.specific_fuel_consumption_l_per_kwh) || getDGSfcFromLoadPercent(averageLoadPercent)
+  const calculatedAnnualElectricity = useMemo(
+    () => ratedCapacityKva * (averageLoadPercent / 100) * effectivePowerFactor * operatingHoursYear,
+    [ratedCapacityKva, averageLoadPercent, effectivePowerFactor, operatingHoursYear]
+  )
+  const calculatedDieselConsumption = useMemo(
+    () => calculatedAnnualElectricity * effectiveSfc,
+    [calculatedAnnualElectricity, effectiveSfc]
+  )
   const defaultCapex = useMemo(
     () => getDefaultDGCapex(ratedCapacityKva),
     [ratedCapacityKva]
@@ -255,6 +279,69 @@ export function DGSetForm({ onBack }: DGSetFormProps) {
 
     lastAutoCapexRef.current = nextDefaultCapex
   }, [defaultCapex, dg.dual_fuel_kit_capex_inr, updateDGSet])
+
+  // Auto-fill SFC from load percentage when user hasn't manually entered SFC
+  useEffect(() => {
+    if (dg.has_annual_diesel_consumption_data === 'yes' || selectedCatalogDGSet) {
+      return
+    }
+
+    const loadSfc = getDGSfcFromLoadPercent(averageLoadPercent)
+    const nextAutoSfcFromLoad = formatAutoCalculatedValue(loadSfc)
+
+    if (
+      nextAutoSfcFromLoad &&
+      (!dg.specific_fuel_consumption_l_per_kwh ||
+        dg.specific_fuel_consumption_l_per_kwh === lastAutoSfcRef.current)
+    ) {
+      if (dg.specific_fuel_consumption_l_per_kwh !== nextAutoSfcFromLoad) {
+        updateDGSet({ specific_fuel_consumption_l_per_kwh: nextAutoSfcFromLoad })
+      }
+
+      lastAutoSfcRef.current = nextAutoSfcFromLoad
+    }
+  }, [
+    averageLoadPercent,
+    dg.has_annual_diesel_consumption_data,
+    dg.specific_fuel_consumption_l_per_kwh,
+    selectedCatalogDGSet,
+    updateDGSet,
+  ])
+
+  // Auto-fill replacement fuel rate when fuel type changes
+  useEffect(() => {
+    const defaultRate = DG_DEFAULT_FUEL_RATES[dg.fuel_type] ?? 0
+    const nextAutoRate = defaultRate > 0 ? String(defaultRate) : ''
+
+    if (
+      nextAutoRate &&
+      (!dg.other_fuel_rate_inr_per_liter ||
+        dg.other_fuel_rate_inr_per_liter === lastAutoFuelRateRef.current)
+    ) {
+      if (dg.other_fuel_rate_inr_per_liter !== nextAutoRate) {
+        updateDGSet({ other_fuel_rate_inr_per_liter: nextAutoRate })
+      }
+
+      lastAutoFuelRateRef.current = nextAutoRate
+    }
+  }, [dg.fuel_type, dg.other_fuel_rate_inr_per_liter, updateDGSet])
+
+  // Auto-fill diesel replacement % when fuel type changes
+  useEffect(() => {
+    const defaultSubstitution = DG_DEFAULT_SUBSTITUTION_PERCENT[dg.fuel_type] ?? DG_DEFAULTS.dieselReplacementPercent
+    const nextAutoSub = String(defaultSubstitution)
+
+    if (
+      !dg.diesel_replacement_percent ||
+      dg.diesel_replacement_percent === lastAutoSubstitutionRef.current
+    ) {
+      if (dg.diesel_replacement_percent !== nextAutoSub) {
+        updateDGSet({ diesel_replacement_percent: nextAutoSub })
+      }
+
+      lastAutoSubstitutionRef.current = nextAutoSub
+    }
+  }, [dg.fuel_type, dg.diesel_replacement_percent, updateDGSet])
 
   const requiredFields = useMemo(
     () => [
@@ -512,19 +599,47 @@ export function DGSetForm({ onBack }: DGSetFormProps) {
                       Annual Electricity Generated
                     </FieldLabel>
                     <InputWithSuffix
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={dg.annual_electricity_generated_kwh}
-                      onChange={(event) =>
-                        updateDGSet({ annual_electricity_generated_kwh: event.target.value })
+                      type="text"
+                      readOnly
+                      value={
+                        calculatedAnnualElectricity > 0
+                          ? formatAutoCalculatedValue(calculatedAnnualElectricity)
+                          : ''
                       }
-                      placeholder="Leave blank to auto-calculate"
                       suffix="kWh"
                       suffixClassName={mixedCaseSuffixClassName}
+                      inputClassName="bg-muted/40 cursor-default"
                     />
+                    <FieldDescription>
+                      Auto-calculated: Rated capacity × Load% × Power factor × Operating hours
+                    </FieldDescription>
                   </Field>
                 </div>
+
+                {dg.has_annual_diesel_consumption_data !== 'yes' ? (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel className="text-sm leading-snug">
+                      Annual Diesel Consumption (calculated)
+                    </FieldLabel>
+                    <InputWithSuffix
+                      type="text"
+                      readOnly
+                      value={
+                        calculatedDieselConsumption > 0
+                          ? formatAutoCalculatedValue(calculatedDieselConsumption)
+                          : ''
+                      }
+                      suffix="L/year"
+                      suffixClassName={mixedCaseSuffixClassName}
+                      inputClassName="bg-muted/40 cursor-default"
+                    />
+                    <FieldDescription>
+                      Auto-calculated: Annual electricity generated × SFC
+                    </FieldDescription>
+                  </Field>
+                </div>
+                ) : null}
 
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field>

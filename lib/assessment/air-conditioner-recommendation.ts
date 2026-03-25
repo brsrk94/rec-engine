@@ -231,7 +231,7 @@ export function calculateAirConditionerScenario(
 
   const currentIseer = getDefaultAirConditionerISEER(currentStarRating, currentType)
   const targetIseer = getDefaultAirConditionerISEER(targetStarRating, targetType)
-  const annualCoolingOutputKwh = currentCapacityKw * operatingHoursYear * loadFactorFraction
+  const annualCoolingOutputKwh = currentCapacityKw * operatingHoursYear
   const currentAnnualEnergyKwh =
     currentIseer > 0 ? annualCoolingOutputKwh / currentIseer : Number.NaN
   const targetAnnualEnergyKwh =

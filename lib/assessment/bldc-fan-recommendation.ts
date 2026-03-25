@@ -322,8 +322,7 @@ export function calculateBLDCFanScenario(
   const numberOfFansToSwitch = parsePositiveNumber(assessment.number_of_fans_to_switch) || 1
   const capexBldcFanInrPerFan =
     parsePositiveNumber(assessment.capex_bldc_fan_inr_per_fan) || 4500
-  const bldcInstallationCostInrPerFan =
-    parsePositiveNumber(assessment.bldc_installation_cost_inr_per_fan) || 3000
+  const bldcInstallationCostInrPerFan = capexBldcFanInrPerFan
   const conventionalInstallationCostInrPerFan =
     parsePositiveNumber(assessment.conventional_installation_cost_inr_per_fan) || 2000
   const currentYearsOfOperation = parsePositiveNumber(assessment.current_years_of_operation)
@@ -485,10 +484,37 @@ export function buildBLDCFanRecommendation(
         }
       })
       .filter((candidate): candidate is BLDCFanRecommendationCandidate => candidate !== null),
-    3
+    2
   )
 
-  if (shortlistedCandidates.length === 0) {
+  // Ensure the user-selected fan is always first in the results
+  const userSelectedMetrics = metrics
+  const userSelectedEntry: BLDCFanRecommendationCandidate | null = assessment.selected_catalog_fan
+    ? {
+        candidate: assessment.selected_catalog_fan,
+        metrics: userSelectedMetrics,
+        roomFitGapMm: getRoomFitGapMm(userSelectedMetrics.roomSize, userSelectedMetrics.bldcSweepMm),
+        sameSelectedMake: true,
+        sameSelectedModel: true,
+        powerRatingW: userSelectedMetrics.bldcPowerRatingW,
+        airDeliveryCmm: userSelectedMetrics.bldcAirDeliveryCmm,
+      }
+    : null
+
+  // Remove duplicates of the user-selected fan from catalog picks
+  const filteredShortlist = userSelectedEntry
+    ? shortlistedCandidates.filter(
+        (entry) =>
+          !(entry.candidate.make === userSelectedEntry.candidate.make &&
+            entry.candidate.model === userSelectedEntry.candidate.model)
+      )
+    : shortlistedCandidates
+
+  const finalCandidates = userSelectedEntry
+    ? [userSelectedEntry, ...filteredShortlist.slice(0, 2)]
+    : shortlistedCandidates
+
+  if (finalCandidates.length === 0) {
     return {
       currentSystem: {
         type: 'Conventional induction motor ceiling fan',
@@ -536,7 +562,7 @@ export function buildBLDCFanRecommendation(
     }
   }
 
-  const leadRecommendation = shortlistedCandidates[0]
+  const leadRecommendation = finalCandidates[0]
 
   return {
     currentSystem: {
@@ -547,12 +573,12 @@ export function buildBLDCFanRecommendation(
       annualEnergy: formatWholeNumber(metrics.totalCurrentAnnualEnergyKwh),
       annualCost: formatWholeNumber(metrics.totalCurrentAnnualExpenditureInr),
     },
-    recommendations: shortlistedCandidates.map((entry, index) => ({
+    recommendations: finalCandidates.map((entry, index) => ({
       id: index + 1,
-      name: `BLDC Ceiling Fan Recommendation ${index + 1}`,
+      name: index === 0 ? 'Your Selected BLDC Fan' : `BLDC Ceiling Fan Recommendation ${index}`,
       make: entry.candidate.make,
       model: entry.candidate.model,
-      badge: index === 0 ? 'Top Recommendation' : 'Recommended',
+      badge: index === 0 ? 'Your Selection' : 'Recommended',
       energySavings: formatWholeNumber(
         entry.metrics.totalCurrentAnnualEnergyKwh - entry.metrics.totalBLDCAnnualEnergyKwh
       ),

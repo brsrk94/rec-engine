@@ -27,6 +27,7 @@ export interface AssessmentRecommendationCardSnapshot {
   recommendedAnnualCost?: number
   currentAnnualEmissions?: number
   recommendedAnnualEmissions?: number
+  dieselEnergyReplaced?: number
 }
 
 export interface MotorComparisonSnapshot {
@@ -40,6 +41,7 @@ export interface MotorComparisonSnapshot {
   recommendedAnnualEmissions: number
   emissionSavings: number
   efficiencyClass?: string
+  dieselEnergyReplaced?: number
 }
 
 export interface AssessmentRecommendationSummary {

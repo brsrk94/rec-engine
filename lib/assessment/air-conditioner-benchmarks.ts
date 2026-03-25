@@ -44,12 +44,52 @@ export const AIR_CONDITIONER_CAPACITY_UNIT_OPTIONS: Array<{
   { value: 'kW', label: 'kW' },
 ]
 
-const DEFAULT_ISEER_BY_STAR: Record<AirConditionerStarRating, number> = {
-  '1': 3.1,
-  '2': 3.4,
-  '3': 3.9,
-  '4': 4.5,
-  '5': 4.9,
+const DEFAULT_ISEER_BY_TYPE_AND_STAR: Record<
+  AirConditionerType,
+  Record<AirConditionerStarRating, number>
+> = {
+  split_fixed_speed: {
+    '1': 3.1,
+    '2': 3.3,
+    '3': 3.9,
+    '4': 4.5,
+    '5': 5.2,
+  },
+  split_inverter: {
+    '1': 3.1,
+    '2': 3.3,
+    '3': 3.9,
+    '4': 4.5,
+    '5': 5.2,
+  },
+  window: {
+    '1': 2.7,
+    '2': 2.8,
+    '3': 3.2,
+    '4': 3.6,
+    '5': 4.1,
+  },
+  standing_tower: {
+    '1': 2.9,
+    '2': 3.0,
+    '3': 3.6,
+    '4': 4.0,
+    '5': 4.6,
+  },
+  cassette: {
+    '1': 3.1,
+    '2': 3.2,
+    '3': 3.6,
+    '4': 4.0,
+    '5': 4.6,
+  },
+  corner_floor_mounted: {
+    '1': 2.9,
+    '2': 3.0,
+    '3': 3.6,
+    '4': 4.0,
+    '5': 4.6,
+  },
 }
 
 const CAPEX_RANGE_BY_TYPE_AND_STAR: Record<
@@ -161,10 +201,12 @@ export function getAirConditionerStarLabel(starRating: string | number | null | 
 
 export function getDefaultAirConditionerISEER(
   starRating: string | number | null | undefined,
-  _type?: string | null
+  type?: string | null
 ) {
-  const normalizedStarRating = normalizeAirConditionerStarRating(starRating)
-  return normalizedStarRating ? DEFAULT_ISEER_BY_STAR[normalizedStarRating] : DEFAULT_ISEER_BY_STAR['3']
+  const normalizedStarRating = normalizeAirConditionerStarRating(starRating) ?? '3'
+  const normalizedType = normalizeAirConditionerType(type ?? '') ?? 'split_fixed_speed'
+  const typeIseerTable = DEFAULT_ISEER_BY_TYPE_AND_STAR[normalizedType]
+  return typeIseerTable?.[normalizedStarRating] ?? DEFAULT_ISEER_BY_TYPE_AND_STAR.split_fixed_speed[normalizedStarRating]
 }
 
 function resolveCapexBand(

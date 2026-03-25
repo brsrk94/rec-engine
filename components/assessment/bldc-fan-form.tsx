@@ -264,9 +264,8 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
       { label: 'BLDC fan model', value: fan.bldc_fan_catalog_key },
       { label: 'Number of fans to switch', value: fan.number_of_fans_to_switch },
       { label: 'BLDC fan capex per fan', value: fan.capex_bldc_fan_inr_per_fan },
-      { label: 'BLDC installation cost per fan', value: fan.bldc_installation_cost_inr_per_fan },
       {
-        label: 'Conventional fan installation cost per fan',
+        label: 'Capex of conventional fan',
         value: fan.conventional_installation_cost_inr_per_fan,
       },
       { label: 'Current years of operation', value: fan.current_years_of_operation },
@@ -775,27 +774,7 @@ export function BLDCFanForm({ onBack }: BLDCFanFormProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field className="justify-start gap-2">
                     <FieldLabel className="text-sm leading-snug">
-                      BLDC installation cost
-                    </FieldLabel>
-                    <InputWithSuffix
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={fan.bldc_installation_cost_inr_per_fan}
-                      onChange={(event) =>
-                        updateBLDCFan({
-                          bldc_installation_cost_inr_per_fan: event.target.value,
-                        })
-                      }
-                      suffix="INR/fan"
-                      suffixClassName={mixedCaseSuffixClassName}
-                    />
-                    <FieldHint />
-                  </Field>
-
-                  <Field className="justify-start gap-2">
-                    <FieldLabel className="text-sm leading-snug">
-                      Conventional installation cost
+                      Capex of Conventional Fan
                     </FieldLabel>
                     <InputWithSuffix
                       type="number"

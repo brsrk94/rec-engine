@@ -198,7 +198,7 @@ function DGSetChartsLegend() {
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-[#05A070]" />
           <span className="text-sm font-semibold text-[#05A070] sm:text-base">
-            recommended DG upgrades
+            recommended fuel retrofit
           </span>
         </div>
       </div>
@@ -237,8 +237,8 @@ export function DGSetRecommendationCharts({
         annualEnergy: currentSystem.annualEnergy,
       },
       ...recommendations.slice(0, 3).map((recommendation) => ({
-        displayName: `${recommendation.make} ${recommendation.model}`.trim(),
-        compactLabel: recommendation.make?.trim() || recommendation.model?.trim() || 'Upgrade',
+        displayName: recommendation.name || 'Retrofit',
+        compactLabel: 'Retrofit',
         annualEnergy: recommendation.recommendedAnnualEnergy ?? 0,
       })),
     ],
@@ -483,7 +483,7 @@ export function DGSetRecommendationCharts({
           <CardHeader>
             <CardTitle>Energy Consumption Comparison Graph</CardTitle>
             <CardDescription>
-              Current DG system versus the recommended DG upgrade options.
+              Current DG system versus the recommended fuel retrofit.
             </CardDescription>
           </CardHeader>
           <CardContent>

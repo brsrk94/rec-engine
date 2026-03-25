@@ -140,6 +140,7 @@ export interface DGSetAssessment {
   dual_fuel_kit_maintenance_inr_per_year: string
   dual_fuel_kit_lifetime_years: string
   discount_factor_percent: string
+  other_fuel_rate_inr_per_liter: string
   years_of_operation: string
 }
 
@@ -295,6 +296,7 @@ const initialDgSetAssessment: DGSetAssessment = {
   dual_fuel_kit_maintenance_inr_per_year: '20000',
   dual_fuel_kit_lifetime_years: '10',
   discount_factor_percent: '8',
+  other_fuel_rate_inr_per_liter: '',
   years_of_operation: '',
 }
 

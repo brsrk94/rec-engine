@@ -61,6 +61,7 @@ export interface MotorUpgradeMetrics {
   annualEnergyCostSavingsPerKwInr: number
   presentValueCurrentPerKw: number
   incrementalCostPerKw: number
+  incrementalCostPerMotorInr: number
   totalIncrementalCostInr: number
   npvEnergyCostSavingsInr: number
   npvEnergyCostSavingsPerKwInr: number
@@ -112,6 +113,12 @@ export interface MotorRecommendationResult {
     model: string
     annualEnergy: number
     annualCost: number
+    annualEnergyLabel?: string
+    annualEnergyDescription?: string
+    annualEnergyFormula?: string
+    annualCostLabel?: string
+    annualCostDescription?: string
+    annualCostFormula?: string
   }
   recommendations: MotorRecommendationCard[]
   summary: {
@@ -163,14 +170,14 @@ export const MOTOR_CLASS_BENCHMARKS = {
     capexMaxInrPerKw: 5000,
   },
   IE3: {
-    efficiencyLeast: 0.9,
-    efficiencyMax: 0.94,
+    efficiencyLeast: 0.96,
+    efficiencyMax: 0.97,
     capexLeastInrPerKw: 4800,
     capexMaxInrPerKw: 6200,
   },
   IE4: {
-    efficiencyLeast: 0.94,
-    efficiencyMax: 0.96,
+    efficiencyLeast: 0.97,
+    efficiencyMax: 0.98,
     capexLeastInrPerKw: 6000,
     capexMaxInrPerKw: 8000,
   },
@@ -338,6 +345,10 @@ export function getMotorBenchmarkCapexPerKw(efficiencyClass: string) {
   return benchmark.capexLeastInrPerKw
 }
 
+function getMotorBenchmarkLeastEfficiency(efficiencyClass: string) {
+  return getMotorClassBenchmark(efficiencyClass)?.efficiencyLeast ?? 0
+}
+
 export function normalizeMotorRatingToKw(
   rating: string | number,
   unit: 'kW' | 'HP'
@@ -363,12 +374,30 @@ export function getCatalogMotorEfficiency(motor: MotorCatalogItem | null) {
     return efficiency / 100
   }
 
-  return getMotorClassBenchmark(motor.efficiency_class)?.efficiencyLeast ?? null
+  return getMotorBenchmarkLeastEfficiency(motor.efficiency_class) || null
 }
 
 export function getCatalogMotorCapexPerKw(motor: MotorCatalogItem | null) {
   if (!motor) {
     return null
+  }
+
+  if (
+    typeof motor.capex_min_inr_per_kw === 'number' &&
+    Number.isFinite(motor.capex_min_inr_per_kw) &&
+    motor.capex_min_inr_per_kw > 0
+  ) {
+    return motor.capex_min_inr_per_kw
+  }
+
+  if (
+    typeof motor.estimated_price_min_inr === 'number' &&
+    Number.isFinite(motor.estimated_price_min_inr) &&
+    motor.estimated_price_min_inr > 0 &&
+    Number.isFinite(motor.rated_power_kw) &&
+    motor.rated_power_kw > 0
+  ) {
+    return motor.estimated_price_min_inr / motor.rated_power_kw
   }
 
   return getMotorBenchmarkCapexPerKw(motor.efficiency_class)
@@ -421,8 +450,8 @@ function getComparableTargetMotors(
 
 function calculateMotorUpgradeMetrics({
   ratingKw,
-  numberOfMotors,
   loadFactor,
+  numberOfMotors,
   operatingHours,
   electricityTariff,
   gridEmissionFactor,
@@ -434,8 +463,8 @@ function calculateMotorUpgradeMetrics({
   targetEfficiency,
 }: {
   ratingKw: number
-  numberOfMotors: number
   loadFactor: number
+  numberOfMotors: number
   operatingHours: number
   electricityTariff: number
   gridEmissionFactor: number
@@ -447,8 +476,7 @@ function calculateMotorUpgradeMetrics({
   targetEfficiency: number
 }) {
   const discountRate = 0.08
-  const capacityBasisKw = ratingKw * numberOfMotors
-  const ratedPowerCurrentKw = ratingKw * loadFactor * numberOfMotors
+  const ratedPowerCurrentKw = ratingKw
   const inputPowerCurrentKw = currentEfficiency > 0 ? ratedPowerCurrentKw / currentEfficiency : 0
   const annualEnergyCurrentKwh = inputPowerCurrentKw * operatingHours
   const inputPowerTargetKw = targetEfficiency > 0 ? ratedPowerCurrentKw / targetEfficiency : 0
@@ -460,13 +488,15 @@ function calculateMotorUpgradeMetrics({
   const annualEmissionsTargetKg = annualEnergyTargetKwh * gridEmissionFactor
   const annualEmissionsSavingsKg = annualEnergySavingsKwh * gridEmissionFactor
   const annualEnergyCostSavingsInr = annualEnergySavingsKwh * electricityTariff
+  const capacityBasisKw = ratedPowerCurrentKw
   const annualEnergyCostSavingsPerKwInr =
     capacityBasisKw > 0 ? annualEnergyCostSavingsInr / capacityBasisKw : 0
   const annualEmissionsSavingsPerKwKg =
     capacityBasisKw > 0 ? annualEmissionsSavingsKg / capacityBasisKw : 0
   const presentValueCurrentPerKw = capexCurrentPerKw * Math.pow(1 - discountRate, currentYears)
   const incrementalCostPerKw = capexTargetPerKw - presentValueCurrentPerKw
-  const totalIncrementalCostInr = incrementalCostPerKw * capacityBasisKw
+  const incrementalCostPerMotorInr = incrementalCostPerKw * ratedPowerCurrentKw
+  const totalIncrementalCostInr = incrementalCostPerMotorInr * numberOfMotors
   const annuityFactor =
     discountRate > 0
       ? (1 - Math.pow(1 + discountRate, -targetLifetime)) / discountRate
@@ -474,14 +504,14 @@ function calculateMotorUpgradeMetrics({
   const npvEnergyCostSavingsInr = annualEnergyCostSavingsInr * annuityFactor
   const npvEnergyCostSavingsPerKwInr = annualEnergyCostSavingsPerKwInr * annuityFactor
   const paybackYears =
-    annualEnergyCostSavingsPerKwInr > 0
-      ? incrementalCostPerKw / annualEnergyCostSavingsPerKwInr
+    annualEnergyCostSavingsInr > 0
+      ? incrementalCostPerKw / annualEnergyCostSavingsInr
       : Number.POSITIVE_INFINITY
   const npvEmissionsReducedKg = annualEmissionsSavingsKg * annuityFactor
   const npvEmissionsReducedPerKwKg = annualEmissionsSavingsPerKwKg * annuityFactor
   const marginalAbatementCost =
-    npvEmissionsReducedPerKwKg > 0
-      ? (incrementalCostPerKw - npvEnergyCostSavingsPerKwInr) / npvEmissionsReducedPerKwKg
+    npvEmissionsReducedKg > 0
+      ? (incrementalCostPerKw - npvEnergyCostSavingsInr) / npvEmissionsReducedKg
       : Number.POSITIVE_INFINITY
 
   return {
@@ -500,6 +530,7 @@ function calculateMotorUpgradeMetrics({
     annualEnergyCostSavingsPerKwInr,
     presentValueCurrentPerKw,
     incrementalCostPerKw,
+    incrementalCostPerMotorInr,
     totalIncrementalCostInr,
     npvEnergyCostSavingsInr,
     npvEnergyCostSavingsPerKwInr,
@@ -513,14 +544,22 @@ function calculateMotorUpgradeMetrics({
 function buildCandidateMetrics(
   candidate: MotorCatalogItem,
   ratingKw: number,
-  assessment: MotorAssessmentCatalogState,
-  currentMotorEfficiency: number
+  assessment: MotorAssessmentCatalogState
 ) {
+  const currentMotor = assessment.selected_catalog_motor
+  const currentClass =
+    assessment.current_motor_efficiency_class ||
+    currentMotor?.efficiency_class ||
+    ''
+
+  const loadFactorPercent = parsePositiveNumber(assessment.load_factor)
+  const loadFactor = loadFactorPercent > 0 ? loadFactorPercent / 100 : 1
+
   return calculateMotorUpgradeMetrics({
     ratingKw:
       normalizeMotorRatingToKw(assessment.motor_rating, assessment.motor_rating_unit) || ratingKw,
+    loadFactor,
     numberOfMotors: parsePositiveNumber(assessment.number_of_motors) || 1,
-    loadFactor: (parsePositiveNumber(assessment.load_factor) || 80) / 100,
     operatingHours: parsePositiveNumber(assessment.operating_hours_year),
     electricityTariff: parsePositiveNumber(assessment.electricity_tariff),
     gridEmissionFactor: parsePositiveNumber(assessment.grid_emission_factor),
@@ -528,19 +567,16 @@ function buildCandidateMetrics(
     targetLifetime: parsePositiveNumber(assessment.lifetime_of_target_motor_class) || 10,
     capexCurrentPerKw:
       parsePositiveNumber(assessment.capex_of_current_motor_class) ||
-      getCatalogMotorCapexPerKw(assessment.selected_catalog_motor) ||
-      getMotorBenchmarkCapexPerKw(assessment.current_motor_efficiency_class) ||
+      getCatalogMotorCapexPerKw(currentMotor) ||
+      getMotorBenchmarkCapexPerKw(currentClass) ||
       0,
     capexTargetPerKw:
-      getCatalogMotorCapexPerKw(candidate) ||
       parsePositiveNumber(assessment.capex_of_target_motor_class) ||
+      getCatalogMotorCapexPerKw(candidate) ||
       getMotorBenchmarkCapexPerKw(candidate.efficiency_class) ||
       0,
-    currentEfficiency: currentMotorEfficiency,
-    targetEfficiency:
-      getCatalogMotorEfficiency(candidate) ||
-      getMotorClassBenchmark(candidate.efficiency_class)?.efficiencyLeast ||
-      0,
+    currentEfficiency: getCatalogMotorEfficiency(currentMotor) || getMotorBenchmarkLeastEfficiency(currentClass),
+    targetEfficiency: getCatalogMotorEfficiency(candidate) || getMotorBenchmarkLeastEfficiency(candidate.efficiency_class),
   })
 }
 
@@ -567,50 +603,40 @@ export function findRecommendedTargetMotors(
     return []
   }
 
-  const currentMotorEfficiency =
-    getCatalogMotorEfficiency(referenceMotor) ||
-    getMotorClassBenchmark(
-      assessment?.current_motor_efficiency_class || referenceMotor?.efficiency_class || ''
-    )?.efficiencyLeast ||
-    0
+  const currentEfficiencyClass =
+    assessment?.current_motor_efficiency_class || referenceMotor?.efficiency_class || ''
+  const currentMotorBaseEfficiency = getMotorBenchmarkLeastEfficiency(currentEfficiencyClass)
+  const resolvedCurrentEfficiency = getCatalogMotorEfficiency(referenceMotor) || currentMotorBaseEfficiency
 
   const scoredCandidates = candidates.map((candidate) => {
+    const candidateEfficiency = getCatalogMotorEfficiency(candidate) || getMotorBenchmarkLeastEfficiency(candidate.efficiency_class)
     const metrics =
-      assessment && currentMotorEfficiency > 0
-        ? buildCandidateMetrics(candidate, ratingKw, assessment, currentMotorEfficiency)
+      assessment && resolvedCurrentEfficiency > 0
+        ? buildCandidateMetrics(candidate, ratingKw, assessment)
         : calculateMotorUpgradeMetrics({
             ratingKw,
-            numberOfMotors: 1,
             loadFactor: 1,
+            numberOfMotors: 1,
             operatingHours: 1,
             electricityTariff: 1,
             gridEmissionFactor: 1,
             currentYears: 0,
             targetLifetime: 1,
             capexCurrentPerKw:
-              getMotorBenchmarkCapexPerKw(referenceMotor?.efficiency_class ?? targetClass) || 0,
+              getCatalogMotorCapexPerKw(referenceMotor) ||
+              getMotorBenchmarkCapexPerKw(currentEfficiencyClass || targetClass) || 0,
             capexTargetPerKw:
               getCatalogMotorCapexPerKw(candidate) ||
               getMotorBenchmarkCapexPerKw(candidate.efficiency_class) ||
               0,
-            currentEfficiency:
-              currentMotorEfficiency ||
-              getMotorClassBenchmark(referenceMotor?.efficiency_class ?? targetClass)
-                ?.efficiencyLeast ||
-              0,
-            targetEfficiency:
-              getCatalogMotorEfficiency(candidate) ||
-              getMotorClassBenchmark(candidate.efficiency_class)?.efficiencyLeast ||
-              0,
+            currentEfficiency: resolvedCurrentEfficiency,
+            targetEfficiency: candidateEfficiency,
           })
 
     return {
       candidate,
       metrics,
-      targetEfficiency:
-        getCatalogMotorEfficiency(candidate) ||
-        getMotorClassBenchmark(candidate.efficiency_class)?.efficiencyLeast ||
-        0,
+      targetEfficiency: candidateEfficiency,
       capexTargetPerKw:
         getCatalogMotorCapexPerKw(candidate) ||
         getMotorBenchmarkCapexPerKw(candidate.efficiency_class) ||
@@ -659,7 +685,7 @@ export function getAvailableTargetClasses(
   currentMotor: MotorCatalogItem | null,
   ratingKw: number,
   preferredMake?: string
-) {
+): string[] {
   if (!currentMotor) {
     return []
   }
@@ -687,17 +713,7 @@ export function getAvailableTargetClasses(
     return higherClasses
   }
 
-  const sameClassAlternatives = findRecommendedTargetMotors(
-    motors,
-    currentMotor.efficiency_class,
-    ratingKw,
-    preferredMake,
-    undefined,
-    1,
-    currentMotor
-  )
-
-  return sameClassAlternatives.length > 0 ? [currentMotor.efficiency_class] : []
+  return []
 }
 
 export function getRecommendedTargetClass(
@@ -754,28 +770,24 @@ export function buildMotorRecommendation(
       )
     : []
 
-  let isSameClassFallback = false
-
-  if (rankedCandidates.length === 0) {
-    recommendationClass = currentMotor.efficiency_class
-    rankedCandidates = findRecommendedTargetMotors(
-      catalogMotors,
-      recommendationClass,
-      ratingKw,
-      motor.motor_make,
-      motor,
-      3,
-      currentMotor
-    )
-    isSameClassFallback = rankedCandidates.length > 0
-  }
-
   if (rankedCandidates.length === 0) {
     return null
   }
 
   const bestCandidate = rankedCandidates[0]
   const bestMetrics = bestCandidate.metrics
+  const numberOfMotors = parsePositiveNumber(motor.number_of_motors) || 1
+  const operatingHours = parsePositiveNumber(motor.operating_hours_year)
+  const electricityTariff = parsePositiveNumber(motor.electricity_tariff)
+  const scaleByMotorCount = (value: number) => value * numberOfMotors
+  const currentMotorCountLabel = numberOfMotors === 1 ? 'motor' : 'motors'
+  const annualEnergyFormula =
+    `Calculation: (${formatMetricValue(ratingKw)} kW / ${formatMetricValue(currentBenchmark.efficiencyLeast, 2)} ` +
+    `${motor.current_motor_efficiency_class} least efficiency) x ${formatMetricValue(operatingHours, 0)} hr/year` +
+    `${numberOfMotors > 1 ? ` x ${formatMetricValue(numberOfMotors, 0)} ${currentMotorCountLabel}` : ''}`
+  const annualCostFormula =
+    `Calculation: ${formatMetricValue(scaleByMotorCount(bestMetrics.annualEnergyCurrentKwh), 0)} kWh/year x ` +
+    `INR ${formatMetricValue(electricityTariff, 2)}/kWh`
 
   const calculationBreakdown = [
     {
@@ -794,12 +806,12 @@ export function buildMotorRecommendation(
       unit: 'kWh/year',
     },
     {
-      label: 'Input power for recommended motor',
+      label: 'Input power for target motor class',
       value: formatMetricValue(bestMetrics.inputPowerTargetKw),
       unit: 'kW',
     },
     {
-      label: 'Annual energy consumption for recommended motor',
+      label: 'Annual energy consumption for target motor class',
       value: formatMetricValue(bestMetrics.annualEnergyTargetKwh),
       unit: 'kWh/year',
     },
@@ -829,9 +841,9 @@ export function buildMotorRecommendation(
       unit: 'INR/kW',
     },
     {
-      label: 'Net present value of energy cost savings over target lifetime',
-      value: formatMetricValue(bestMetrics.npvEnergyCostSavingsPerKwInr),
-      unit: 'INR/kW',
+      label: 'Net present value of energy cost savings over lifetime of target motor class',
+      value: formatMetricValue(bestMetrics.npvEnergyCostSavingsInr),
+      unit: 'INR',
     },
     {
       label: 'Payback period',
@@ -841,12 +853,12 @@ export function buildMotorRecommendation(
       unit: 'years',
     },
     {
-      label: 'Net present value of emissions reduced over target lifetime',
-      value: formatMetricValue(bestMetrics.npvEmissionsReducedPerKwKg),
-      unit: 'kgCO2e/kW',
+      label: 'Net present value of emissions reduced over lifetime of target motor class',
+      value: formatMetricValue(bestMetrics.npvEmissionsReducedKg),
+      unit: 'kgCO2e',
     },
     {
-      label: 'Marginal abatement cost',
+      label: 'Marginal Abatement Cost (per motor per kW)',
       value: Number.isFinite(bestMetrics.marginalAbatementCost)
         ? formatMetricValue(bestMetrics.marginalAbatementCost, 4)
         : 'N/A',
@@ -860,8 +872,16 @@ export function buildMotorRecommendation(
       rating: `${motor.motor_rating} ${motor.motor_rating_unit}`,
       make: currentMotor.make,
       model: currentMotor.model,
-      annualEnergy: Math.round(bestMetrics.annualEnergyCurrentKwh),
-      annualCost: Math.round(bestMetrics.annualCostCurrentInr),
+      annualEnergy: Math.round(scaleByMotorCount(bestMetrics.annualEnergyCurrentKwh)),
+      annualCost: Math.round(scaleByMotorCount(bestMetrics.annualCostCurrentInr)),
+      annualEnergyLabel: 'Annual Energy for Current Motor',
+      annualEnergyDescription:
+        `For the selected current ${currentMotorCountLabel}: ${currentMotor.make} ${currentMotor.model}`,
+      annualEnergyFormula,
+      annualCostLabel: 'Annual Electricity Cost',
+      annualCostDescription:
+        `For the selected current ${currentMotorCountLabel}: ${currentMotor.make} ${currentMotor.model}`,
+      annualCostFormula,
     },
     recommendations: rankedCandidates.map((entry, index) => ({
       id: index + 1,
@@ -874,9 +894,9 @@ export function buildMotorRecommendation(
           : index === 1
             ? 'Strong Alternative'
             : 'Alternative',
-      energySavings: Math.round(entry.metrics.annualEnergySavingsKwh),
-      costSavings: Math.round(entry.metrics.annualEnergyCostSavingsInr),
-      emissionSavings: Math.round(entry.metrics.annualEmissionsSavingsKg),
+      energySavings: Math.round(scaleByMotorCount(entry.metrics.annualEnergySavingsKwh)),
+      costSavings: Math.round(scaleByMotorCount(entry.metrics.annualEnergyCostSavingsInr)),
+      emissionSavings: Math.round(scaleByMotorCount(entry.metrics.annualEmissionsSavingsKg)),
       upgradeCost: Math.round(entry.metrics.totalIncrementalCostInr),
       paybackYears: Number.isFinite(entry.metrics.paybackYears)
         ? entry.metrics.paybackYears.toFixed(2)
@@ -887,24 +907,28 @@ export function buildMotorRecommendation(
         : 'N/A',
       details: `${entry.candidate.rated_power_kw.toLocaleString('en-IN')} kW | ${Number(
         (entry.targetEfficiency * 100).toFixed(1)
-      )}% efficiency${
-        entry.sameClassFallback
-          ? ` | Best available ${entry.candidate.efficiency_class} alternative`
-          : ` | Ranked within ${recommendationClass}`
-      }`,
+      )}% efficiency | Ranked within ${recommendationClass}`,
       efficiencyClass: entry.candidate.efficiency_class,
       ratedPowerKw: entry.candidate.rated_power_kw,
-      currentAnnualEnergy: Math.round(entry.metrics.annualEnergyCurrentKwh),
-      recommendedAnnualEnergy: Math.round(entry.metrics.annualEnergyTargetKwh),
-      currentAnnualCost: Math.round(entry.metrics.annualCostCurrentInr),
-      recommendedAnnualCost: Math.round(entry.metrics.annualCostTargetInr),
-      currentAnnualEmissions: Math.round(entry.metrics.annualEmissionsCurrentKg),
-      recommendedAnnualEmissions: Math.round(entry.metrics.annualEmissionsTargetKg),
+      currentAnnualEnergy: Math.round(scaleByMotorCount(entry.metrics.annualEnergyCurrentKwh)),
+      recommendedAnnualEnergy: Math.round(
+        scaleByMotorCount(entry.metrics.annualEnergyTargetKwh)
+      ),
+      currentAnnualCost: Math.round(scaleByMotorCount(entry.metrics.annualCostCurrentInr)),
+      recommendedAnnualCost: Math.round(scaleByMotorCount(entry.metrics.annualCostTargetInr)),
+      currentAnnualEmissions: Math.round(
+        scaleByMotorCount(entry.metrics.annualEmissionsCurrentKg)
+      ),
+      recommendedAnnualEmissions: Math.round(
+        scaleByMotorCount(entry.metrics.annualEmissionsTargetKg)
+      ),
     })),
     summary: {
-      totalEnergySavings: Math.round(bestMetrics.annualEnergySavingsKwh),
-      totalCostSavings: Math.round(bestMetrics.annualEnergyCostSavingsInr),
-      totalEmissionSavings: Number((bestMetrics.annualEmissionsSavingsKg / 1000).toFixed(2)),
+      totalEnergySavings: Math.round(scaleByMotorCount(bestMetrics.annualEnergySavingsKwh)),
+      totalCostSavings: Math.round(scaleByMotorCount(bestMetrics.annualEnergyCostSavingsInr)),
+      totalEmissionSavings: Number(
+        (scaleByMotorCount(bestMetrics.annualEmissionsSavingsKg) / 1000).toFixed(2)
+      ),
       averagePayback: Number.isFinite(bestMetrics.paybackYears)
         ? bestMetrics.paybackYears.toFixed(2)
         : 'N/A',
@@ -918,24 +942,30 @@ export function buildMotorRecommendation(
           color: '#94A3B8',
           dashed: true,
           data: Array.from({ length: 10 }, (_, index) =>
-            Number((bestMetrics.annualEnergyCurrentKwh * (index + 1)).toFixed(2))
+            Number(
+              (scaleByMotorCount(bestMetrics.annualEnergyCurrentKwh) * (index + 1)).toFixed(2)
+            )
           ),
         },
         ...rankedCandidates.map((entry, index) => ({
           name: getLegendLabel(entry.candidate, index),
           color: MOTOR_RECOMMENDATION_COLORS[index] ?? MOTOR_RECOMMENDATION_COLORS.at(-1) ?? '#10B981',
           data: Array.from({ length: 10 }, (_, yearIndex) =>
-            Number((entry.metrics.annualEnergyTargetKwh * (yearIndex + 1)).toFixed(2))
+            Number(
+              (scaleByMotorCount(entry.metrics.annualEnergyTargetKwh) * (yearIndex + 1)).toFixed(
+                2
+              )
+            )
           ),
         })),
       ],
       energySplitData: [
         {
-          value: Number(bestMetrics.annualEnergySavingsKwh.toFixed(2)),
+          value: Number(scaleByMotorCount(bestMetrics.annualEnergySavingsKwh).toFixed(2)),
           name: 'Annual energy saved',
         },
         {
-          value: Number(bestMetrics.annualEnergyTargetKwh.toFixed(2)),
+          value: Number(scaleByMotorCount(bestMetrics.annualEnergyTargetKwh).toFixed(2)),
           name: 'Annual energy used by best recommendation',
         },
       ],
@@ -962,13 +992,11 @@ export function buildMotorRecommendation(
         },
         {
           label: 'NPV energy savings',
-          value: formatMetricValue(bestMetrics.npvEnergyCostSavingsPerKwInr),
-          unit: 'INR/kW',
+          value: formatMetricValue(bestMetrics.npvEnergyCostSavingsInr),
+          unit: 'INR',
         },
       ],
     },
-    recommendationNote: isSameClassFallback
-      ? `No higher-efficiency catalog class is available for this ${currentMotor.efficiency_class} motor, so the shortlist uses better ${currentMotor.efficiency_class} motors.`
-      : '',
+    recommendationNote: '',
   }
 }

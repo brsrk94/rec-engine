@@ -241,8 +241,7 @@ export function calculateLEDRetrofitScenario(
   const lumensBasedCapex = getLEDCapexEstimateForLumens(ledLumens)
   const ledCapexInrPerLed =
     parsePositiveNumber(assessment.led_capex_inr_per_led) || lumensBasedCapex?.approxCapexInr || 0
-  const ledInstallationCostInrPerLed =
-    parsePositiveNumber(assessment.led_installation_cost_inr_per_led) || 100
+  const ledInstallationCostInrPerLed = ledCapexInrPerLed
   const conventionalBulbInstallationCostInrPerBulb =
     parsePositiveNumber(assessment.conventional_bulb_installation_cost_inr_per_bulb) || 20
   const currentYearsOfOperation = parsePositiveNumber(assessment.current_years_of_operation)

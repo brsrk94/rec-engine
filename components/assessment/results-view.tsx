@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -38,89 +37,9 @@ import {
   type AssessmentEquipmentKey,
 } from '@/lib/assessment/equipment-meta'
 import { buildLEDRetrofitRecommendation } from '@/lib/assessment/led-retrofit-recommendation'
-import { buildMotorRecommendation, type MotorRecommendationResult } from '@/lib/motor-catalog'
+import { buildMotorRecommendation } from '@/lib/motor-catalog'
 import { formatIndianNumber } from '@/lib/formatting'
 
-function ChartPanelSkeleton() {
-  return (
-    <div className="grid gap-6 xl:grid-cols-2">
-      {Array.from({ length: 2 }).map((_, index) => (
-        <div
-          key={index}
-          className="neo-card h-[380px] rounded-3xl bg-card p-4 sm:h-[420px] sm:p-6"
-        >
-          <div className="h-full animate-pulse rounded-[22px] bg-muted/40" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-const MotorRecommendationCharts = dynamic(
-  () =>
-    import('@/components/assessment/motor-recommendation-charts').then(
-      (module) => module.MotorRecommendationCharts
-    ),
-  {
-    ssr: false,
-    loading: () => <ChartPanelSkeleton />,
-  }
-)
-
-const CompressorRecommendationCharts = dynamic(
-  () =>
-    import('@/components/assessment/compressor-recommendation-charts').then(
-      (module) => module.CompressorRecommendationCharts
-    ),
-  {
-    ssr: false,
-    loading: () => <ChartPanelSkeleton />,
-  }
-)
-
-const BLDCFanRecommendationCharts = dynamic(
-  () =>
-    import('@/components/assessment/bldc-fan-recommendation-charts').then(
-      (module) => module.BLDCFanRecommendationCharts
-    ),
-  {
-    ssr: false,
-    loading: () => <ChartPanelSkeleton />,
-  }
-)
-
-const AirConditionerRecommendationCharts = dynamic(
-  () =>
-    import('@/components/assessment/air-conditioner-recommendation-charts').then(
-      (module) => module.AirConditionerRecommendationCharts
-    ),
-  {
-    ssr: false,
-    loading: () => <ChartPanelSkeleton />,
-  }
-)
-
-const LEDRetrofitRecommendationCharts = dynamic(
-  () =>
-    import('@/components/assessment/led-retrofit-recommendation-charts').then(
-      (module) => module.LEDRetrofitRecommendationCharts
-    ),
-  {
-    ssr: false,
-    loading: () => <ChartPanelSkeleton />,
-  }
-)
-
-const DGSetRecommendationCharts = dynamic(
-  () =>
-    import('@/components/assessment/dg-set-recommendation-charts').then(
-      (module) => module.DGSetRecommendationCharts
-    ),
-  {
-    ssr: false,
-    loading: () => <ChartPanelSkeleton />,
-  }
-)
 
 function isKnownEquipmentType(value: string): value is AssessmentEquipmentKey {
   return value in assessmentEquipmentMeta
@@ -400,13 +319,7 @@ export function ResultsView() {
     return <ResultsLoadingState />
   }
 
-  const motorResults =
-    equipmentType === 'motor' ? (recommendationResult as MotorRecommendationResult) : null
   const isCompressorResults = equipmentType === 'compressor'
-  const isBLDCFanResults = equipmentType === 'bldc_fan'
-  const isAirConditionerResults = equipmentType === 'air_conditioner'
-  const isLEDRetrofitResults = equipmentType === 'led_retrofit'
-  const isDGSetResults = equipmentType === 'dg_set'
 
   const startFreshAssessment = () => {
     clearAll()
@@ -438,9 +351,11 @@ export function ResultsView() {
             <CurrentSystemCard currentSystem={recommendationResult.currentSystem} />
           </motion.div>
 
-          <motion.div variants={staggerItemVariants}>
-            <ResultsSummaryGrid summary={recommendationResult.summary} />
-          </motion.div>
+          {equipmentType !== 'motor' && equipmentType !== 'compressor' && equipmentType !== 'bldc_fan' && equipmentType !== 'led_retrofit' && equipmentType !== 'air_conditioner' && equipmentType !== 'dg_set' ? (
+            <motion.div variants={staggerItemVariants}>
+              <ResultsSummaryGrid summary={recommendationResult.summary} />
+            </motion.div>
+          ) : null}
 
           <motion.section aria-labelledby="recommended-upgrades-heading" variants={staggerItemVariants}>
             <h2 id="recommended-upgrades-heading" className="mb-4 text-xl font-semibold text-primary">
@@ -468,59 +383,6 @@ export function ResultsView() {
             </div>
           </motion.section>
 
-          {isCompressorResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <CompressorRecommendationCharts
-                currentSystem={recommendationResult.currentSystem}
-                recommendations={recommendationResult.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
-          {motorResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <MotorRecommendationCharts
-                currentSystem={motorResults.currentSystem}
-                recommendations={motorResults.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
-          {isBLDCFanResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <BLDCFanRecommendationCharts
-                currentSystem={recommendationResult.currentSystem}
-                recommendations={recommendationResult.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
-          {isAirConditionerResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <AirConditionerRecommendationCharts
-                currentSystem={recommendationResult.currentSystem}
-                recommendations={recommendationResult.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
-          {isLEDRetrofitResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <LEDRetrofitRecommendationCharts
-                currentSystem={recommendationResult.currentSystem}
-                recommendations={recommendationResult.recommendations}
-              />
-            </motion.div>
-          ) : null}
-
-          {isDGSetResults ? (
-            <motion.div variants={staggerItemVariants}>
-              <DGSetRecommendationCharts
-                currentSystem={recommendationResult.currentSystem}
-                recommendations={recommendationResult.recommendations}
-              />
-            </motion.div>
-          ) : null}
 
           <motion.div
             className="flex flex-col gap-4 pt-6 sm:flex-row sm:justify-start"

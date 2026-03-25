@@ -130,7 +130,6 @@ export function LEDRetrofitForm({ onBack }: LEDRetrofitFormProps) {
 
   const isFormValid = () => {
     return Boolean(
-      led.conventional_bulb_model &&
       led.conventional_bulb_power_rating_w &&
       led.daily_runtime_hours &&
       led.working_days_per_year &&
@@ -140,7 +139,6 @@ export function LEDRetrofitForm({ onBack }: LEDRetrofitFormProps) {
       led.led_power_rating_w &&
       led.number_of_bulbs_to_switch &&
       led.led_capex_inr_per_led &&
-      led.led_installation_cost_inr_per_led &&
       led.conventional_bulb_installation_cost_inr_per_bulb &&
       led.current_years_of_operation &&
       led.discount_factor_percent &&
@@ -184,19 +182,6 @@ export function LEDRetrofitForm({ onBack }: LEDRetrofitFormProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field className="justify-start gap-2">
                     <FieldLabel className={fieldLabelClassName}>
-                      Conventional incandescent bulb model
-                    </FieldLabel>
-                    <Input
-                      value={led.conventional_bulb_model}
-                      onChange={(event) =>
-                        updateLEDRetrofit({ conventional_bulb_model: event.target.value })
-                      }
-                      placeholder="Enter make and model"
-                    />
-                  </Field>
-
-                  <Field className="justify-start gap-2">
-                    <FieldLabel className={fieldLabelClassName}>
                       Power rating of conventional incandescent bulb
                     </FieldLabel>
                     <InputWithSuffix
@@ -233,7 +218,7 @@ export function LEDRetrofitForm({ onBack }: LEDRetrofitFormProps) {
 
                   <Field className="justify-start gap-2">
                     <FieldLabel className={fieldLabelClassName}>
-                      Conventional bulb installation cost
+                      Capex of Conventional Bulb
                     </FieldLabel>
                     <InputWithSuffix
                       type="number"
@@ -467,7 +452,7 @@ export function LEDRetrofitForm({ onBack }: LEDRetrofitFormProps) {
 
                   <Field className="justify-start gap-2">
                     <FieldLabel className={fieldLabelClassName}>
-                      Capital cost for LED
+                      Capex of LED
                     </FieldLabel>
                     <InputWithSuffix
                       type="number"
@@ -485,26 +470,6 @@ export function LEDRetrofitForm({ onBack }: LEDRetrofitFormProps) {
                         ? `Auto-filled from ${selectedLedCapexEstimate.label} band: INR ${selectedLedCapexEstimate.capexMinInr}-${selectedLedCapexEstimate.capexMaxInr} per fixture (using INR ${selectedLedCapexEstimate.approxCapexInr}).`
                         : null}
                     </FieldHint>
-                  </Field>
-
-                  <Field className="justify-start gap-2">
-                    <FieldLabel className={fieldLabelClassName}>
-                      LED installation cost
-                    </FieldLabel>
-                    <InputWithSuffix
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={led.led_installation_cost_inr_per_led}
-                      onChange={(event) =>
-                        updateLEDRetrofit({
-                          led_installation_cost_inr_per_led: event.target.value,
-                        })
-                      }
-                      suffix="INR/LED"
-                      suffixClassName={suffixClassName}
-                    />
-                    <FieldHint />
                   </Field>
                 </div>
 
